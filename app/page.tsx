@@ -44,52 +44,57 @@ export default function DashboardPage() {
       {/* LEWY PANEL — POZA wyśrodkowanym kontenerem: przyklejony do lewej krawędzi
           okna, pełna wysokość pod navbarem (fixed). Wizualnie nachodzi na stopkę,
           ale jej nie przesuwa (jest poza zwykłym przepływem). */}
-      <aside className="flex flex-col border-b border-gh-border bg-gh-bg lg:fixed lg:bottom-0 lg:left-0 lg:top-16 lg:z-10 lg:w-[336px] lg:border-b-0 lg:border-r">
-        <header className="px-4 pt-4 pb-3 text-sm font-semibold text-gh-text">
-          Twoje ostatnie projekty
-        </header>
-        <div className="px-4 pb-1">
-          <div className="flex items-center gap-2 rounded-md border border-gh-border bg-gh-bg px-2 py-1 text-gh-subtle transition-colors focus-within:border-gh-blue">
-            <SearchIcon />
-            <input
-              type="text"
-              value={projectQuery}
-              onChange={(e) => setProjectQuery(e.target.value)}
-              placeholder="Znajdź projekt..."
-              aria-label="Znajdź projekt po nazwie"
-              className="w-full bg-transparent py-1 text-sm text-gh-text placeholder:text-gh-subtle focus:outline-none"
-            />
+      <aside className="flex flex-col border-b border-gh-border bg-gh-bg lg:fixed lg:bottom-0 lg:left-0 lg:top-16 lg:z-10 lg:w-[336px] lg:border-b-0 lg:border-r lg:border-t">
+        {/* Równa kolumna 287px wyśrodkowana w panelu 336px (49px marginesu).
+            Nagłówek, pole wyszukiwania i lista mają tę samą lewą i prawą krawędź. */}
+        <div className="mx-auto flex w-[287px] flex-1 flex-col lg:min-h-0">
+          <header className="pt-4 pb-3 text-sm font-semibold text-gh-text">
+            Twoje ostatnie projekty
+          </header>
+          {/* Sztywne pole 287×32px — nie rozciąga się ani nie kurczy. */}
+          <div className="pb-1">
+            <div className="flex h-8 w-[287px] items-center gap-2 rounded-md border border-gh-border bg-gh-bg px-2 text-gh-subtle transition-colors focus-within:border-gh-blue">
+              <SearchIcon />
+              <input
+                type="text"
+                value={projectQuery}
+                onChange={(e) => setProjectQuery(e.target.value)}
+                placeholder="Znajdź projekt..."
+                aria-label="Znajdź projekt po nazwie"
+                className="w-full bg-transparent text-sm text-gh-text placeholder:text-gh-subtle focus:outline-none"
+              />
+            </div>
           </div>
-        </div>
-        <ul className="max-h-[420px] overflow-y-auto lg:max-h-none lg:flex-1">
-          {filteredProjects.length === 0 ? (
-            <li className="px-4 py-4 text-sm text-gh-subtle">
-              Brak pasujących projektów.
-            </li>
-          ) : (
-            filteredProjects.map((p) => (
-              <li key={p.id}>
-                <a
-                  href="#"
-                  className="group flex flex-col gap-1 px-4 py-2 transition-colors hover:bg-gh-surface2"
-                >
-                  <span className="flex items-center gap-2 truncate text-sm font-semibold text-gh-text">
-                    <RepoIcon />
-                    <span className="truncate group-hover:underline">{p.name}</span>
-                  </span>
-                  <span className="flex items-center gap-2 text-xs text-gh-muted">
-                    <span
-                      className="inline-block h-2 w-2 rounded-full"
-                      style={{ backgroundColor: p.languageColor }}
-                      aria-hidden
-                    />
-                    {p.language}
-                  </span>
-                </a>
+          <ul className="max-h-[420px] overflow-y-auto lg:max-h-none lg:min-h-0 lg:flex-1">
+            {filteredProjects.length === 0 ? (
+              <li className="py-4 text-sm text-gh-subtle">
+                Brak pasujących projektów.
               </li>
-            ))
-          )}
-        </ul>
+            ) : (
+              filteredProjects.map((p) => (
+                <li key={p.id}>
+                  <a
+                    href="#"
+                    className="group flex min-w-0 flex-col gap-1 py-2 transition-colors hover:bg-gh-surface2"
+                  >
+                    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gh-text">
+                      <RepoIcon />
+                      <span className="truncate group-hover:underline">{p.name}</span>
+                    </span>
+                    <span className="flex items-center gap-2 text-xs text-gh-muted">
+                      <span
+                        className="inline-block h-2 w-2 rounded-full"
+                        style={{ backgroundColor: p.languageColor }}
+                        aria-hidden
+                      />
+                      {p.language}
+                    </span>
+                  </a>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
       </aside>
 
       {/* WYŚRODKOWANY KONTENER TREŚCI (max 1280px) — tylko środek + prawy panel. */}
