@@ -40,16 +40,16 @@ export default function DashboardPage() {
 
   return (
     // Offset z lewej (lg) robi miejsce na panel przyklejony do krawędzi okna.
-    <div className="lg:pl-[300px]">
+    <div className="lg:pl-[336px]">
       {/* LEWY PANEL — POZA wyśrodkowanym kontenerem: przyklejony do lewej krawędzi
           okna, pełna wysokość pod navbarem (fixed). Wizualnie nachodzi na stopkę,
           ale jej nie przesuwa (jest poza zwykłym przepływem). */}
-      <aside className="flex flex-col border-b border-gh-border bg-gh-surface lg:fixed lg:bottom-0 lg:left-0 lg:top-16 lg:z-10 lg:w-[300px] lg:border-b-0 lg:border-r">
+      <aside className="flex flex-col border-b border-gh-border bg-gh-bg lg:fixed lg:bottom-0 lg:left-0 lg:top-16 lg:z-10 lg:w-[336px] lg:border-b-0 lg:border-r">
         <header className="border-b border-gh-border px-4 py-4 text-sm font-semibold text-gh-text">
           Twoje ostatnie projekty
         </header>
         <div className="border-b border-gh-border p-4">
-          <div className="flex items-center gap-2 rounded-md border border-gh-border bg-gh-bg px-2 py-1 text-gh-subtle">
+          <div className="flex items-center gap-2 rounded-md border border-gh-border bg-gh-bg px-2 py-1 text-gh-subtle transition-colors focus-within:border-gh-blue">
             <SearchIcon />
             <input
               type="text"
@@ -71,7 +71,7 @@ export default function DashboardPage() {
               <li key={p.id}>
                 <a
                   href="#"
-                  className="flex flex-col gap-1 border-b border-gh-border-muted px-4 py-2 transition-colors last:border-b-0 hover:bg-gh-surface2"
+                  className="flex flex-col gap-1 px-4 py-2 transition-colors hover:bg-gh-surface2"
                 >
                   <span className="flex items-center gap-2 truncate text-sm font-semibold text-gh-blue">
                     <RepoIcon />
