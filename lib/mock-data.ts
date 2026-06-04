@@ -54,6 +54,7 @@ export interface Quest {
   description: string;
   repoName: string;
   criteria: string[];
+  openChallenge: string; // część otwarta — „zrób coś od siebie"
   whyNew: string;
 }
 
@@ -65,6 +66,9 @@ export const currentUser = {
   login: "dolil",
   profileUrl: "#",
   joinedDate: "2025-09-12",
+  bio: "Codziennie buduję coś nowego. Realizuję questy DailyQuest i uczę się przez praktykę — jeden publiczny projekt dziennie. 🚀",
+  followers: "21.2k",
+  following: 312,
   currentStreak: 12,
   longestStreak: 28,
   totalQuests: 47,
@@ -88,6 +92,11 @@ export const todayQuest: Quest = {
     "README opisuje, jak zbudować (cargo build) i uruchomić narzędzie",
     "Działa na realnym przykładzie pokazanym w README",
   ],
+  openChallenge:
+    "Wymagania powyżej to absolutne minimum. Dorzuć COŚ OD SIEBIE, czego nikt " +
+    "Ci nie kazał robić — np. kolorowy output, flagę --json, obsługę wielu " +
+    "plików naraz albo prosty benchmark prędkości. Ta część jest oceniana jako " +
+    "Twoja inwencja i to ona realnie buduje portfolio.",
   whyNew:
     "W Twoich repo nie ma ani jednego projektu w Rust — to nowy język i nowy typ " +
     "narzędzia (CLI) w Twoim profilu.",
@@ -310,3 +319,125 @@ export function formatPlDate(iso: string): string {
 export function shortMonth(monthIndex: number): string {
   return PL_MONTHS_SHORT[monthIndex];
 }
+
+// ===========================================================================
+// ETAP 2 — questy na żądanie, repozytoria questowe, kalendarz ukończeń
+// ===========================================================================
+
+// --- Stan generowania questa -----------------------------------------------
+// Quest NIE generuje się automatycznie — user klika „Wygeneruj quest" (limit
+// 1/dzień). Ta flaga ustawia DOMYŚLNY stan dashboardu: false = Stan A (brak
+// questa), true = Stan B (quest widoczny). Na dashboardzie jest też przełącznik
+// testowy, żeby łatwo zobaczyć oba stany bez ruszania tej flagi.
+export const questGeneratedToday = false;
+
+// --- Twoje questy (lewy panel dashboardu; od najstarszego do najnowszego) ---
+export interface YourQuest {
+  id: string;
+  title: string;
+  repoName: string;
+}
+
+export const yourQuests: YourQuest[] = [
+  { id: "yq-01", title: "Lista TODO w terminalu", repoName: "daily-quest-todo-cli" },
+  { id: "yq-02", title: "Generator bezpiecznych haseł", repoName: "daily-quest-passgen" },
+  { id: "yq-03", title: "Skracacz linków w Node.js", repoName: "daily-quest-shortlink" },
+  { id: "yq-04", title: "Gra w życie (Conway)", repoName: "daily-quest-game-of-life" },
+  { id: "yq-05", title: "Interpreter Brainfuck", repoName: "daily-quest-bf-interpreter" },
+  { id: "yq-06", title: "Kompresor Huffmana", repoName: "daily-quest-huffman" },
+  { id: "yq-07", title: "Cache LRU bez bibliotek", repoName: "daily-quest-lru-cache" },
+  { id: "yq-08", title: "Konwerter Markdown → HTML", repoName: "daily-quest-md2html" },
+  { id: "yq-09", title: "Mini serwer HTTP bez frameworka", repoName: "daily-quest-bare-http" },
+  { id: "yq-10", title: "Parser argumentów CLI w Go", repoName: "daily-quest-go-args" },
+];
+
+// --- Poprzednie questy (prawy panel dashboardu) -----------------------------
+export interface PreviousQuest {
+  id: string;
+  title: string;
+  repoName: string;
+  relativeDate: string; // „Wczoraj", „2 dni temu", ...
+}
+
+// Pusta lista => panel „Poprzednie questy" w ogóle się nie pokazuje.
+export const previousQuests: PreviousQuest[] = [
+  { id: "pq-1", title: "Parser argumentów CLI w Go", repoName: "daily-quest-go-args", relativeDate: "Wczoraj" },
+  { id: "pq-2", title: "Mini serwer HTTP bez frameworka", repoName: "daily-quest-bare-http", relativeDate: "2 dni temu" },
+  { id: "pq-3", title: "Konwerter Markdown → HTML", repoName: "daily-quest-md2html", relativeDate: "3 dni temu" },
+  { id: "pq-4", title: "Wizualizacja sortowania na canvasie", repoName: "daily-quest-sort-viz", relativeDate: "5 dni temu" },
+  { id: "pq-5", title: "Cache LRU bez bibliotek", repoName: "daily-quest-lru-cache", relativeDate: "tydzień temu" },
+];
+
+// --- Repozytoria questowe (profil) ------------------------------------------
+export interface Repo {
+  name: string;
+  description: string;
+  language: string;
+  languageColor: string;
+  stars: number;
+  updatedRelative: string;
+  isPublic: boolean;
+}
+
+// Od najnowszego do najstarszego. Overview pokazuje pierwsze 6, zakładka
+// Repositories — wszystkie.
+export const questRepos: Repo[] = [
+  { name: "daily-quest-rust-cli", description: "Narzędzie CLI w Rust liczące statystyki plików tekstowych.", language: "Rust", languageColor: "#dea584", stars: 14, updatedRelative: "3 godziny temu", isPublic: true },
+  { name: "daily-quest-go-args", description: "Lekki parser argumentów wiersza poleceń napisany w Go.", language: "Go", languageColor: "#00ADD8", stars: 8, updatedRelative: "wczoraj", isPublic: true },
+  { name: "daily-quest-bare-http", description: "Serwer HTTP zbudowany od zera, bez żadnego frameworka.", language: "TypeScript", languageColor: "#3178c6", stars: 23, updatedRelative: "2 dni temu", isPublic: true },
+  { name: "daily-quest-md2html", description: "Konwerter Markdown → HTML z obsługą tabel i bloków kodu.", language: "Python", languageColor: "#3572A5", stars: 11, updatedRelative: "3 dni temu", isPublic: true },
+  { name: "daily-quest-sort-viz", description: "Wizualizacja algorytmów sortowania na elemencie <canvas>.", language: "JavaScript", languageColor: "#f1e05a", stars: 31, updatedRelative: "5 dni temu", isPublic: true },
+  { name: "daily-quest-lru-cache", description: "Implementacja cache LRU bez zewnętrznych bibliotek.", language: "C++", languageColor: "#f34b7d", stars: 6, updatedRelative: "tydzień temu", isPublic: true },
+  { name: "daily-quest-huffman", description: "Kompresor i dekompresor plików oparty o kodowanie Huffmana.", language: "C", languageColor: "#555555", stars: 9, updatedRelative: "2 tygodnie temu", isPublic: true },
+  { name: "daily-quest-game-of-life", description: "Gra w życie Conwaya renderowana wprost w terminalu.", language: "Zig", languageColor: "#ec915c", stars: 4, updatedRelative: "3 tygodnie temu", isPublic: true },
+];
+
+// --- Kalendarz ukończonych questów (profil) ---------------------------------
+// WAŻNE: kalendarz jest BINARNY — dzień ukończony albo nie. Tylko jeden odcień
+// zieleni (#39d353), bez stopniowania (inaczej niż dawna wielopoziomowa heatmapa).
+export interface QuestDay {
+  date: string; // YYYY-MM-DD
+  done: boolean;
+  description?: string;
+}
+
+export const QUEST_DONE_COLOR = "#39d353";
+export const QUEST_EMPTY_COLOR = "#161b22";
+
+function generateQuestCalendar(): QuestDay[] {
+  const days: QuestDay[] = [];
+
+  // Start ~rok wstecz, wyrównany do poniedziałku (wiersze Pon–Nd).
+  const start = new Date(TODAY);
+  start.setUTCDate(start.getUTCDate() - 364);
+  const mondayOffset = (start.getUTCDay() + 6) % 7;
+  start.setUTCDate(start.getUTCDate() - mondayOffset);
+
+  const cursor = new Date(start);
+  while (cursor <= TODAY) {
+    const date = isoDate(cursor);
+    const h = hashString(date);
+    const done = h % 100 < 40; // ~40% dni z ukończonym questem
+    const day: QuestDay = { date, done };
+    if (done) {
+      day.description = HEATMAP_DESCRIPTIONS[h % HEATMAP_DESCRIPTIONS.length];
+    }
+    days.push(day);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  // Ostatnie `currentStreak` dni muszą być ukończone (spójność ze streakiem).
+  for (let i = 0; i < currentUser.currentStreak; i++) {
+    const idx = days.length - 1 - i;
+    if (idx < 0) break;
+    days[idx].done = true;
+    const h = hashString(days[idx].date);
+    days[idx].description = HEATMAP_DESCRIPTIONS[h % HEATMAP_DESCRIPTIONS.length];
+  }
+
+  return days;
+}
+
+export const questCalendar: QuestDay[] = generateQuestCalendar();
+
+export const questsCompletedLastYear = questCalendar.filter((d) => d.done).length;
