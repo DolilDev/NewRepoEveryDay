@@ -11,7 +11,7 @@ function GitHubMark() {
 export default function Footer() {
   return (
     <footer className="mt-12 border-t border-gh-border">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 py-6 text-xs text-gh-muted">
+      <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-center gap-x-2 gap-y-1 px-6 py-6 text-xs text-gh-muted">
         <span>DailyQuest — statyczny szkielet UI.</span>
         <span className="text-gh-subtle">Zrobione przez</span>
         <a
