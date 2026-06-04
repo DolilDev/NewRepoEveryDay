@@ -9,21 +9,24 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // GitHub dark palette
+        // GitHub dark (Primer) — każdy kolor pochodzi ze zmiennej CSS z globals.css.
         gh: {
-          bg: "#0d1117",
-          surface: "#161b22",
-          surface2: "#1c2128",
-          border: "#30363d",
-          "border-muted": "#21262d",
-          text: "#e6edf3",
-          muted: "#8b949e",
-          subtle: "#6e7681",
-          green: "#238636",
-          "green-hover": "#2ea043",
-          blue: "#2f81f7",
-          danger: "#f85149",
-          gold: "#d29922",
+          bg: "var(--color-canvas)",
+          surface: "var(--color-surface)",
+          surface2: "var(--color-hover)",
+          border: "var(--color-border)",
+          "border-muted": "var(--color-border-subtle)",
+          text: "var(--color-fg)",
+          muted: "var(--color-fg-muted)",
+          subtle: "var(--color-fg-subtle)",
+          green: "var(--color-success)",
+          "green-hover": "var(--color-success)",
+          blue: "var(--color-accent)",
+          purple: "var(--color-purple)",
+        },
+        calendar: {
+          done: "var(--color-calendar-done)",
+          empty: "var(--color-calendar-empty)",
         },
       },
       fontFamily: {

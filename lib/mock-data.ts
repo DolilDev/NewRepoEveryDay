@@ -342,8 +342,8 @@ export interface QuestDay {
   description?: string;
 }
 
-export const QUEST_DONE_COLOR = "#39d353";
-export const QUEST_EMPTY_COLOR = "#161b22";
+export const QUEST_DONE_COLOR = "var(--color-calendar-done)";
+export const QUEST_EMPTY_COLOR = "var(--color-calendar-empty)";
 
 function generateQuestCalendar(): QuestDay[] {
   const days: QuestDay[] = [];
