@@ -1,99 +1,79 @@
-import Avatar from "@/components/Avatar";
-import Heatmap from "@/components/Heatmap";
-import { achievements, currentUser, formatPlDate } from "@/lib/mock-data";
+import QuestCalendar from "@/components/QuestCalendar";
+import { questRepos } from "@/lib/mock-data";
 
-const stats = [
-  { label: "Aktualny streak", value: `${currentUser.currentStreak} dni`, accent: true },
-  { label: "Najdłuższy streak", value: `${currentUser.longestStreak} dni` },
-  { label: "Ukończone questy", value: currentUser.totalQuests },
-  { label: "Punkty", value: currentUser.points.toLocaleString("pl-PL") },
-];
+function RepoIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="text-gh-muted" aria-hidden>
+      <path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.249.249 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z" />
+    </svg>
+  );
+}
 
-export default function ProfilePage() {
+function StarIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z" />
+    </svg>
+  );
+}
+
+export default function ProfileOverviewPage() {
+  const recent = questRepos.slice(0, 6);
+
   return (
     <div className="space-y-8">
-      {/* Nagłówek profilu w stylu GitHuba */}
-      <section className="flex flex-col items-center text-center sm:flex-row sm:items-end sm:gap-5 sm:text-left">
-        <Avatar name={currentUser.name} login={currentUser.login} size={96} />
-        <div className="mt-4 sm:mt-0">
-          <h1 className="text-2xl font-bold leading-tight text-gh-text">
-            {currentUser.name}
-          </h1>
-          <a
-            href={currentUser.profileUrl}
-            className="text-lg text-gh-muted hover:text-gh-blue hover:underline"
-          >
-            @{currentUser.login}
-          </a>
-          <p className="mt-1 text-sm text-gh-subtle">
-            Dołączył {formatPlDate(currentUser.joinedDate)}
-          </p>
-        </div>
-      </section>
-
-      {/* Statystyki */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {stats.map((s) => (
-          <div
-            key={s.label}
-            className="rounded-lg border border-gh-border bg-gh-surface p-4"
-          >
-            <div
-              className={`text-2xl font-bold ${
-                s.accent ? "text-gh-green-hover" : "text-gh-text"
-              }`}
-            >
-              {s.value}
-            </div>
-            <div className="mt-0.5 text-xs text-gh-muted">{s.label}</div>
-          </div>
-        ))}
-      </section>
-
-      {/* Heatmapa-streak */}
-      <section className="rounded-lg border border-gh-border bg-gh-surface p-5">
-        <h2 className="mb-4 text-sm font-semibold text-gh-text">
-          Kalendarz questów
-        </h2>
-        <Heatmap />
-      </section>
-
-      {/* Osiągnięcia */}
+      {/* 6 ostatnich repozytoriów stworzonych dzięki tej stronie */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold text-gh-text">
-          Osiągnięcia
-          <span className="ml-2 font-normal text-gh-muted">
-            {achievements.filter((a) => a.unlocked).length} z {achievements.length}
-          </span>
+        <h2 className="mb-3 text-base font-semibold text-gh-text">
+          6 ostatnich repozytoriów stworzonych dzięki tej stronie
         </h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {achievements.map((a) => (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {recent.map((repo) => (
             <div
-              key={a.id}
-              title={
-                a.unlocked && a.unlockedDate
-                  ? `Odblokowano ${formatPlDate(a.unlockedDate)}`
-                  : "Jeszcze nieodblokowane"
-              }
-              className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
-                a.unlocked
-                  ? "border-gh-border bg-gh-surface"
-                  : "border-gh-border-muted bg-gh-surface/40 opacity-50 grayscale"
-              }`}
+              key={repo.name}
+              className="rounded-md border border-gh-border bg-gh-surface p-4"
             >
-              <span className="text-2xl" aria-hidden>
-                {a.icon}
-              </span>
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-gh-text">
-                  {a.name}
-                </div>
-                <div className="truncate text-xs text-gh-muted">
-                  {a.unlocked ? a.description : "🔒 Zablokowane"}
-                </div>
+              <div className="flex items-center justify-between gap-2">
+                <a
+                  href="#"
+                  className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-gh-blue hover:underline"
+                >
+                  <RepoIcon />
+                  <span className="truncate">{repo.name}</span>
+                </a>
+                <span className="shrink-0 rounded-full border border-gh-border px-2 py-0.5 text-[10px] font-medium text-gh-muted">
+                  Public
+                </span>
+              </div>
+              <p className="mt-2 line-clamp-2 text-xs text-gh-muted">
+                {repo.description}
+              </p>
+              <div className="mt-3 flex items-center gap-4 text-xs text-gh-muted">
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block h-3 w-3 rounded-full"
+                    style={{ backgroundColor: repo.languageColor }}
+                    aria-hidden
+                  />
+                  {repo.language}
+                </span>
+                <span className="flex items-center gap-1">
+                  <StarIcon />
+                  {repo.stars}
+                </span>
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Kalendarz ukończonych questów (binarny, jeden odcień zieleni) */}
+      <section>
+        <h2 className="mb-3 text-base font-semibold text-gh-text">
+          Kalendarz ukończonych questów
+        </h2>
+        <div className="rounded-lg border border-gh-border bg-gh-surface p-5">
+          <QuestCalendar />
         </div>
       </section>
     </div>
