@@ -34,7 +34,7 @@ export default function ProfileTabs() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex gap-2 overflow-x-auto border-b border-gh-border">
+    <nav className="-mb-px flex h-12 items-end gap-4 overflow-x-auto">
       {TABS.map((tab) => {
         const active =
           tab.href === "/profile"
@@ -46,10 +46,10 @@ export default function ProfileTabs() {
             key={tab.href}
             href={tab.href}
             aria-current={active ? "page" : undefined}
-            className={`-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm transition-colors ${
+            className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-2 pb-2 text-sm transition-colors ${
               active
-                ? "border-[#fd8c73] font-semibold text-gh-text"
-                : "border-transparent text-gh-muted hover:border-gh-border hover:text-gh-text"
+                ? "border-gh-text font-semibold text-gh-text"
+                : "border-transparent text-gh-muted hover:text-gh-text"
             }`}
           >
             <Icon />

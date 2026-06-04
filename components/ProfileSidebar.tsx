@@ -19,12 +19,13 @@ function CalendarIcon() {
 }
 
 export default function ProfileSidebar() {
-  const unlocked = achievements.filter((a) => a.unlocked).length;
+  // GitHub pokazuje wyłącznie zdobyte osiągnięcia — bez wyszarzonych „zablokowanych".
+  const unlocked = achievements.filter((a) => a.unlocked);
 
   return (
-    <aside className="w-full shrink-0 md:w-72">
+    <aside className="w-full shrink-0 md:w-[296px]">
       <div className="flex flex-col items-center text-center md:items-start md:text-left">
-        <Avatar name={currentUser.name} login={currentUser.login} size={200} />
+        <Avatar name={currentUser.name} login={currentUser.login} size={260} />
 
         <h1 className="mt-4 text-2xl font-bold leading-tight text-gh-text">
           {currentUser.name}
@@ -36,9 +37,9 @@ export default function ProfileSidebar() {
           @{currentUser.login}
         </a>
 
-        <p className="mt-3 text-sm text-gh-text">{currentUser.bio}</p>
+        <p className="mt-4 text-sm text-gh-text">{currentUser.bio}</p>
 
-        <div className="mt-3 flex items-center gap-1.5 text-sm text-gh-muted">
+        <div className="mt-4 flex items-center gap-2 text-sm text-gh-muted">
           <PeopleIcon />
           <span>
             <span className="font-semibold text-gh-text">
@@ -52,44 +53,42 @@ export default function ProfileSidebar() {
           </span>
         </div>
 
-        <div className="mt-2 flex items-center gap-1.5 text-sm text-gh-muted">
+        <div className="mt-2 flex items-center gap-2 text-sm text-gh-muted">
           <CalendarIcon />
           <span>Dołączył {formatPlDate(currentUser.joinedDate)}</span>
         </div>
       </div>
 
-      {/* Achievements */}
-      <section className="mt-6 w-full border-t border-gh-border pt-5">
-        <h2 className="mb-3 text-sm font-semibold text-gh-text">
-          Osiągnięcia
-          <span className="ml-2 font-normal text-gh-muted">
-            {unlocked} z {achievements.length}
-          </span>
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {achievements.map((a) => (
-            <span
-              key={a.id}
-              title={
-                a.unlocked && a.unlockedDate
-                  ? `${a.name} — odblokowano ${formatPlDate(a.unlockedDate)}`
-                  : `${a.name} — ${a.description} (jeszcze nieodblokowane)`
-              }
-              className={`flex h-11 w-11 items-center justify-center rounded-full border text-xl ${
-                a.unlocked
-                  ? "border-gh-border bg-gh-surface"
-                  : "border-gh-border-muted bg-gh-surface/40 opacity-40 grayscale"
-              }`}
-            >
-              <span aria-hidden>{a.icon}</span>
+      {/* Osiągnięcia — pokazujemy WYŁĄCZNIE zdobyte; brak → sekcja znika. */}
+      {unlocked.length > 0 && (
+        <section className="mt-6 w-full border-t border-gh-border pt-6">
+          <h2 className="mb-4 text-sm font-semibold text-gh-text">
+            Osiągnięcia
+            <span className="ml-2 font-normal text-gh-muted">
+              {unlocked.length}
             </span>
-          ))}
-        </div>
-      </section>
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {unlocked.map((a) => (
+              <span
+                key={a.id}
+                title={
+                  a.unlockedDate
+                    ? `${a.name} — odblokowano ${formatPlDate(a.unlockedDate)}`
+                    : a.name
+                }
+                className="flex h-12 w-12 items-center justify-center rounded-full border border-gh-border bg-gh-surface text-xl"
+              >
+                <span aria-hidden>{a.icon}</span>
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
 
       <a
         href="#"
-        className="mt-6 inline-block text-xs text-gh-muted hover:text-gh-danger hover:underline"
+        className="mt-6 inline-block text-xs text-gh-muted hover:text-gh-blue hover:underline"
       >
         Zgłoś użytkownika
       </a>
