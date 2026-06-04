@@ -57,7 +57,7 @@ export default function ProfileRepositoriesPage() {
         {questRepos.map((repo) => (
           <li
             key={repo.name}
-            className="flex items-start justify-between gap-4 border-b border-gh-border py-5"
+            className="flex items-start justify-between gap-4 border-b border-gh-border py-6"
           >
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -72,9 +72,9 @@ export default function ProfileRepositoriesPage() {
                   Public
                 </span>
               </div>
-              <p className="mt-1.5 text-sm text-gh-muted">{repo.description}</p>
+              <p className="mt-2 text-sm text-gh-muted">{repo.description}</p>
               <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-gh-muted">
-                <span className="flex items-center gap-1.5">
+                <span className="flex items-center gap-2">
                   <span
                     className="inline-block h-3 w-3 rounded-full"
                     style={{ backgroundColor: repo.languageColor }}
@@ -93,7 +93,7 @@ export default function ProfileRepositoriesPage() {
             <button
               type="button"
               disabled
-              className="inline-flex shrink-0 cursor-default items-center gap-1.5 rounded-md border border-gh-border bg-gh-surface px-3 py-1 text-xs font-medium text-gh-text"
+              className="inline-flex h-8 shrink-0 cursor-default items-center gap-2 rounded-md border border-gh-border bg-gh-surface px-2 text-xs font-medium text-gh-text"
             >
               <StarIcon />
               Star
