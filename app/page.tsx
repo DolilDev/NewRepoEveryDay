@@ -45,10 +45,10 @@ export default function DashboardPage() {
           okna, pełna wysokość pod navbarem (fixed). Wizualnie nachodzi na stopkę,
           ale jej nie przesuwa (jest poza zwykłym przepływem). */}
       <aside className="flex flex-col border-b border-gh-border bg-gh-bg lg:fixed lg:bottom-0 lg:left-0 lg:top-16 lg:z-10 lg:w-[336px] lg:border-b-0 lg:border-r">
-        <header className="border-b border-gh-border px-4 py-4 text-sm font-semibold text-gh-text">
+        <header className="px-4 py-4 text-sm font-semibold text-gh-text">
           Twoje ostatnie projekty
         </header>
-        <div className="border-b border-gh-border p-4">
+        <div className="p-4">
           <div className="flex items-center gap-2 rounded-md border border-gh-border bg-gh-bg px-2 py-1 text-gh-subtle transition-colors focus-within:border-gh-blue">
             <SearchIcon />
             <input
@@ -71,11 +71,11 @@ export default function DashboardPage() {
               <li key={p.id}>
                 <a
                   href="#"
-                  className="flex flex-col gap-1 px-4 py-2 transition-colors hover:bg-gh-surface2"
+                  className="group flex flex-col gap-1 px-4 py-2 transition-colors hover:bg-gh-surface2"
                 >
-                  <span className="flex items-center gap-2 truncate text-sm font-semibold text-gh-blue">
+                  <span className="flex items-center gap-2 truncate text-sm font-semibold text-gh-text">
                     <RepoIcon />
-                    <span className="truncate">{p.name}</span>
+                    <span className="truncate group-hover:underline">{p.name}</span>
                   </span>
                   <span className="flex items-center gap-2 text-xs text-gh-muted">
                     <span
