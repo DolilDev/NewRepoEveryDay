@@ -272,24 +272,25 @@ export function shortMonth(monthIndex: number): string {
 // testowy, żeby łatwo zobaczyć oba stany bez ruszania tej flagi.
 export const questGeneratedToday = false;
 
-// --- Twoje questy (lewy panel dashboardu; od najstarszego do najnowszego) ---
-export interface YourQuest {
+// --- Twoje ostatnie projekty (lewy panel dashboardu) ------------------------
+// WYŁĄCZNIE projekty stworzone dzięki tej stronie (nie wszystkie repo konta).
+// Od najnowszego do najstarszego.
+export interface QuestProject {
   id: string;
-  title: string;
-  repoName: string;
+  name: string;
+  language: string;
+  languageColor: string;
 }
 
-export const yourQuests: YourQuest[] = [
-  { id: "yq-01", title: "Lista TODO w terminalu", repoName: "daily-quest-todo-cli" },
-  { id: "yq-02", title: "Generator bezpiecznych haseł", repoName: "daily-quest-passgen" },
-  { id: "yq-03", title: "Skracacz linków w Node.js", repoName: "daily-quest-shortlink" },
-  { id: "yq-04", title: "Gra w życie (Conway)", repoName: "daily-quest-game-of-life" },
-  { id: "yq-05", title: "Interpreter Brainfuck", repoName: "daily-quest-bf-interpreter" },
-  { id: "yq-06", title: "Kompresor Huffmana", repoName: "daily-quest-huffman" },
-  { id: "yq-07", title: "Cache LRU bez bibliotek", repoName: "daily-quest-lru-cache" },
-  { id: "yq-08", title: "Konwerter Markdown → HTML", repoName: "daily-quest-md2html" },
-  { id: "yq-09", title: "Mini serwer HTTP bez frameworka", repoName: "daily-quest-bare-http" },
-  { id: "yq-10", title: "Parser argumentów CLI w Go", repoName: "daily-quest-go-args" },
+export const questProjects: QuestProject[] = [
+  { id: "qp-01", name: "daily-quest-rust-cli", language: "Rust", languageColor: "#dea584" },
+  { id: "qp-02", name: "daily-quest-go-args", language: "Go", languageColor: "#00ADD8" },
+  { id: "qp-03", name: "daily-quest-bare-http", language: "TypeScript", languageColor: "#3178c6" },
+  { id: "qp-04", name: "daily-quest-md2html", language: "Python", languageColor: "#3572A5" },
+  { id: "qp-05", name: "daily-quest-sort-viz", language: "JavaScript", languageColor: "#f1e05a" },
+  { id: "qp-06", name: "daily-quest-lru-cache", language: "C++", languageColor: "#f34b7d" },
+  { id: "qp-07", name: "daily-quest-huffman", language: "C", languageColor: "#555555" },
+  { id: "qp-08", name: "daily-quest-game-of-life", language: "Zig", languageColor: "#ec915c" },
 ];
 
 // --- Poprzednie questy (prawy panel dashboardu) -----------------------------
