@@ -33,14 +33,6 @@ export interface Achievement {
   unlockedDate?: string;
 }
 
-export type HeatLevel = 0 | 1 | 2 | 3 | 4;
-
-export interface HeatmapDay {
-  date: string; // YYYY-MM-DD
-  level: HeatLevel;
-  description?: string;
-}
-
 export interface ChatMessage {
   id: string;
   authorName: string;
@@ -203,7 +195,7 @@ export const chatMessages: ChatMessage[] = [
   { id: "m14", authorName: "Hiro Tanaka", authorLogin: "hiro_t", content: "oby nie, dopiero co ogarnąłem ten borrow checker 😭", time: "10:16" },
 ];
 
-// --- Heatmapa (generowana deterministycznie za ostatni rok) ----------------
+// --- Opisy ukończonych questów + funkcje pomocnicze (współdzielone) --------
 
 const HEATMAP_DESCRIPTIONS = [
   "Zbudował CLI do konwersji CSV w Go",
@@ -245,59 +237,8 @@ function hashString(s: string): number {
   return h;
 }
 
-function generateHeatmap(): HeatmapDay[] {
-  const days: HeatmapDay[] = [];
-
-  // Start ~rok wstecz, wyrównany do poniedziałku (wiersze Pon–Nd).
-  const start = new Date(TODAY);
-  start.setUTCDate(start.getUTCDate() - 364);
-  const mondayOffset = (start.getUTCDay() + 6) % 7; // 0 = poniedziałek
-  start.setUTCDate(start.getUTCDate() - mondayOffset);
-
-  const cursor = new Date(start);
-  while (cursor <= TODAY) {
-    const date = isoDate(cursor);
-    const h = hashString(date);
-
-    // ~30% dni puste, reszta z rosnącą intensywnością.
-    let level: HeatLevel;
-    if (h % 10 < 3) {
-      level = 0;
-    } else {
-      level = ((h % 4) + 1) as HeatLevel;
-    }
-
-    const day: HeatmapDay = { date, level };
-    if (level > 0) {
-      day.description = HEATMAP_DESCRIPTIONS[h % HEATMAP_DESCRIPTIONS.length];
-    }
-    days.push(day);
-
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-  }
-
-  // Aktualny streak (12 dni) — ostatnie dni muszą być aktywne i spójne z UI.
-  for (let i = 0; i < currentUser.currentStreak; i++) {
-    const idx = days.length - 1 - i;
-    if (idx < 0) break;
-    const h = hashString(days[idx].date);
-    days[idx].level = (((h % 3) + 2) as HeatLevel); // 2..4 — wyraźnie zielone
-    days[idx].description = HEATMAP_DESCRIPTIONS[h % HEATMAP_DESCRIPTIONS.length];
-  }
-
-  return days;
-}
-
-export const heatmap: HeatmapDay[] = generateHeatmap();
-
-// Odcienie zieleni jak na kalendarzu commitów GitHuba (ciemny motyw).
-export const HEAT_COLORS: Record<HeatLevel, string> = {
-  0: "#161b22",
-  1: "#0e4429",
-  2: "#006d32",
-  3: "#26a641",
-  4: "#39d353",
-};
+// (Dawna wielopoziomowa heatmapa usunięta — profil używa kalendarza binarnego
+// QuestCalendar; HEATMAP_DESCRIPTIONS i helpery niżej są współdzielone.)
 
 // --- Pomocnicze formatowanie dat (po polsku, bez zależności od Intl) -------
 
