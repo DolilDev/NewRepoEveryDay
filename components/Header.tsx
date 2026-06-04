@@ -44,7 +44,9 @@ export default function Header() {
 
   return (
     <header className="border-b border-gh-border bg-gh-surface">
-      <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-6">
+      {/* Pełna szerokość okna — bez wyśrodkowanego kontenera, by elementy
+          dosięgały skrajnych rogów (padding boczny 16px). */}
+      <div className="flex h-16 items-center justify-between gap-4 px-4">
         {/* Lewa strona: logo + nazwa */}
         <Link href="/" className="flex items-center gap-2 text-base font-semibold text-gh-text">
           <FlameLogo />
