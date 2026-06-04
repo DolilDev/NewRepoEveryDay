@@ -21,13 +21,13 @@ export default function ProfileOverviewPage() {
   const recent = questRepos.slice(0, 6);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* 6 ostatnich repozytoriów stworzonych dzięki tej stronie */}
       <section>
-        <h2 className="mb-3 text-base font-semibold text-gh-text">
+        <h2 className="mb-4 text-base font-semibold text-gh-text">
           6 ostatnich repozytoriów stworzonych dzięki tej stronie
         </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {recent.map((repo) => (
             <div
               key={repo.name}
@@ -36,20 +36,20 @@ export default function ProfileOverviewPage() {
               <div className="flex items-center justify-between gap-2">
                 <a
                   href="#"
-                  className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-gh-blue hover:underline"
+                  className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gh-blue hover:underline"
                 >
                   <RepoIcon />
                   <span className="truncate">{repo.name}</span>
                 </a>
-                <span className="shrink-0 rounded-full border border-gh-border px-2 py-0.5 text-[10px] font-medium text-gh-muted">
+                <span className="shrink-0 rounded-full border border-gh-border px-2 text-xs font-medium text-gh-muted">
                   Public
                 </span>
               </div>
               <p className="mt-2 line-clamp-2 text-xs text-gh-muted">
                 {repo.description}
               </p>
-              <div className="mt-3 flex items-center gap-4 text-xs text-gh-muted">
-                <span className="flex items-center gap-1.5">
+              <div className="mt-4 flex items-center gap-4 text-xs text-gh-muted">
+                <span className="flex items-center gap-2">
                   <span
                     className="inline-block h-3 w-3 rounded-full"
                     style={{ backgroundColor: repo.languageColor }}
@@ -69,10 +69,10 @@ export default function ProfileOverviewPage() {
 
       {/* Kalendarz ukończonych questów (binarny, jeden odcień zieleni) */}
       <section>
-        <h2 className="mb-3 text-base font-semibold text-gh-text">
+        <h2 className="mb-4 text-base font-semibold text-gh-text">
           Kalendarz ukończonych questów
         </h2>
-        <div className="rounded-lg border border-gh-border bg-gh-surface p-5">
+        <div className="rounded-md border border-gh-border bg-gh-surface p-4">
           <QuestCalendar />
         </div>
       </section>

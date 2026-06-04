@@ -58,7 +58,7 @@ export default function QuestCalendar() {
 
   return (
     <div>
-      <div className="mb-3 text-sm text-gh-muted">
+      <div className="mb-4 text-sm text-gh-muted">
         {questsCompletedLastYear} ukończonych questów w ostatnim roku
       </div>
 
@@ -128,7 +128,7 @@ export default function QuestCalendar() {
       </div>
 
       {/* Legenda (binarna: ukończony / brak) */}
-      <div className="mt-3 flex items-center justify-end gap-2 text-xs text-gh-muted">
+      <div className="mt-4 flex items-center justify-end gap-2 text-xs text-gh-muted">
         <span
           style={{
             width: CELL,
