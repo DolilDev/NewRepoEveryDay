@@ -8,7 +8,7 @@ export default function LeaderboardPage() {
   );
 
   return (
-    <div className="mx-auto max-w-4xl space-y-5 px-4 py-8">
+    <div className="mx-auto max-w-4xl space-y-6 px-6 py-6">
       <div>
         <h1 className="text-2xl font-semibold text-gh-text">Ranking</h1>
         <p className="text-sm text-gh-muted">
@@ -16,17 +16,17 @@ export default function LeaderboardPage() {
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-gh-border">
+      <div className="overflow-hidden rounded-md border border-gh-border">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="bg-gh-surface2 text-left text-xs uppercase tracking-wide text-gh-muted">
-              <th className="w-12 px-4 py-3 text-center font-semibold">#</th>
-              <th className="px-4 py-3 font-semibold">Gracz</th>
-              <th className="px-4 py-3 text-right font-semibold">Streak</th>
-              <th className="hidden px-4 py-3 text-right font-semibold sm:table-cell">
+              <th className="w-12 px-4 py-4 text-center font-semibold">#</th>
+              <th className="px-4 py-4 font-semibold">Gracz</th>
+              <th className="px-4 py-4 text-right font-semibold">Streak</th>
+              <th className="hidden px-4 py-4 text-right font-semibold sm:table-cell">
                 Questy
               </th>
-              <th className="px-4 py-3 text-right font-semibold">Punkty</th>
+              <th className="px-4 py-4 text-right font-semibold">Punkty</th>
             </tr>
           </thead>
           <tbody>
@@ -38,14 +38,14 @@ export default function LeaderboardPage() {
                 <tr
                   key={player.id}
                   className={`border-t border-gh-border ${
-                    isMe ? "bg-gh-green/10" : "bg-gh-surface hover:bg-gh-surface2"
+                    isMe ? "bg-gh-surface2" : "bg-gh-surface hover:bg-gh-surface2"
                   }`}
                 >
-                  <td className="px-4 py-3 text-center font-mono text-gh-muted">
+                  <td className="px-4 py-4 text-center font-mono text-gh-muted">
                     {medal ?? rank}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-4">
                       <Avatar name={player.name} login={player.login} size={28} />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -53,7 +53,7 @@ export default function LeaderboardPage() {
                             {player.name}
                           </span>
                           {isMe && (
-                            <span className="rounded-full border border-gh-green/40 bg-gh-green/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-gh-green-hover">
+                            <span className="rounded-full border border-gh-green/40 bg-gh-green/10 px-2 text-xs font-semibold uppercase text-gh-green">
                               Ty
                             </span>
                           )}
@@ -67,13 +67,13 @@ export default function LeaderboardPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-gh-text">
+                  <td className="px-4 py-4 text-right font-semibold text-gh-text">
                     🔥 {player.currentStreak}
                   </td>
-                  <td className="hidden px-4 py-3 text-right text-gh-muted sm:table-cell">
+                  <td className="hidden px-4 py-4 text-right text-gh-muted sm:table-cell">
                     {player.totalQuests}
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-gh-text">
+                  <td className="px-4 py-4 text-right font-semibold text-gh-text">
                     {player.points.toLocaleString("pl-PL")}
                   </td>
                 </tr>
