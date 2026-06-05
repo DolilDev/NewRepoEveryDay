@@ -46,7 +46,7 @@ export default function ProfileTabs() {
             key={tab.href}
             href={tab.href}
             aria-current={active ? "page" : undefined}
-            className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-2 pb-[9px] text-sm transition-colors ${
+            className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-2 pb-[10px] text-sm transition-colors ${
               active
                 ? "border-gh-tab-active font-semibold text-gh-text"
                 : "border-transparent text-gh-muted hover:text-gh-text"
