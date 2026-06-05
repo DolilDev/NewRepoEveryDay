@@ -85,13 +85,6 @@ export default function ProfileSidebar() {
           </div>
         </section>
       )}
-
-      <a
-        href="#"
-        className="mt-6 inline-block text-xs text-gh-muted hover:text-gh-blue hover:underline"
-      >
-        Zgłoś użytkownika
-      </a>
     </aside>
   );
 }
