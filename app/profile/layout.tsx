@@ -10,7 +10,7 @@ export default function ProfileLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div>
+    <div className="flex-1 bg-gh-panel">
       {/* Drugi pasek nawigacji — ciągnie się przez całą szerokość strony.
           Padding px-4 jak w navbarze, by zakładki zaczynały się pod logiem. */}
       <div className="border-b border-gh-border">
