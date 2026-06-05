@@ -46,7 +46,7 @@ export default function Header() {
         </Link>
 
         {/* Prawa strona: Ranking → dzwonek → avatar */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           {/* Zakładka Ranking — ikona w obramowaniu, jak powiadomienia */}
           <Link
             href="/leaderboard"
