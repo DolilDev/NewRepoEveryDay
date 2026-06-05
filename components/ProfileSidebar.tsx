@@ -34,7 +34,7 @@ export default function ProfileSidebar() {
           href={currentUser.profileUrl}
           className="text-xl font-light text-gh-muted hover:text-gh-blue hover:underline"
         >
-          @{currentUser.login}
+          {currentUser.login}
         </a>
 
         <p className="mt-4 text-sm text-gh-text">{currentUser.bio}</p>
