@@ -292,7 +292,7 @@ export default function DashboardPage() {
                       oś biegnie po jego lewej stronie aż do dołu. */}
                   <a
                     href="#"
-                    className="ml-[21px] inline-block text-sm text-gh-link-muted hover:underline"
+                    className="ml-[21px] inline-block text-sm font-light text-gh-link-muted hover:underline"
                   >
                     Zobacz historię →
                   </a>
