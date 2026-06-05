@@ -78,7 +78,7 @@ export default function DashboardPage() {
                     href="#"
                     className="group flex min-w-0 flex-col gap-1 py-2"
                   >
-                    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gh-text">
+                    <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-gh-text">
                       <RepoIcon />
                       <span className="truncate group-hover:underline">{p.name}</span>
                     </span>
