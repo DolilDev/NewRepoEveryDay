@@ -52,7 +52,10 @@ export default function ProfileTabs() {
                 : "border-transparent text-gh-muted hover:text-gh-text"
             }`}
           >
-            <Icon />
+            {/* Ikona zawsze szara (gh-muted) — kolor nie zmienia się przy aktywacji. */}
+            <span className="text-gh-muted">
+              <Icon />
+            </span>
             <span>{tab.label}</span>
             {tab.count != null && (
               <span className="rounded-full bg-gh-surface2 px-2 text-xs font-normal text-gh-muted">
