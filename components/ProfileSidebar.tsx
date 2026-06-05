@@ -55,7 +55,7 @@ export default function ProfileSidebar() {
 
         <div className="mt-2 flex items-center gap-2 text-sm text-gh-muted">
           <CalendarIcon />
-          <span>Dołączył {formatPlDate(currentUser.joinedDate)}</span>
+          <span>Dołączył do DailyQuest {formatPlDate(currentUser.joinedDate)}</span>
         </div>
       </div>
 

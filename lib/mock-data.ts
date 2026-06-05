@@ -57,7 +57,7 @@ export const currentUser = {
   name: "Mateusz Dolny",
   login: "dolil",
   profileUrl: "#",
-  joinedDate: "2025-09-12",
+  joinedDate: "2025-09-12", // Data rejestracji w DailyQuest
   bio: "Codziennie buduję coś nowego. Realizuję questy DailyQuest i uczę się przez praktykę — jeden publiczny projekt dziennie. 🚀",
   followers: "21.2k",
   following: 312,
