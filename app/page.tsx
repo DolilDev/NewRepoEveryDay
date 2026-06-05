@@ -252,7 +252,7 @@ export default function DashboardPage() {
 
           {/* PRAWY PANEL — Ostatnie questy: oś czasu z kropkami (max 5; ukryty, gdy pusto) */}
           {recentQuests.length > 0 && (
-            <aside className="lg:w-[300px] lg:shrink-0">
+            <aside className="lg:w-[312px] lg:shrink-0">
               <div className="rounded-md border border-gh-border bg-gh-panel p-4">
                 <header className="mb-4 text-sm font-semibold text-gh-text">
                   Ostatnie questy
