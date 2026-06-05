@@ -44,7 +44,7 @@ export default function DashboardPage() {
       {/* LEWY PANEL — POZA wyśrodkowanym kontenerem: przyklejony do lewej krawędzi
           okna, pełna wysokość pod navbarem (fixed). Wizualnie nachodzi na stopkę,
           ale jej nie przesuwa (jest poza zwykłym przepływem). */}
-      <aside className="flex flex-col border-b border-gh-border bg-gh-panel lg:fixed lg:bottom-0 lg:left-0 lg:top-16 lg:z-10 lg:w-[336px] lg:border-b-0 lg:border-r lg:border-t">
+      <aside className="flex flex-col border-b border-gh-border bg-gh-panel lg:fixed lg:bottom-0 lg:left-0 lg:top-[52px] lg:z-10 lg:w-[336px] lg:border-b-0 lg:border-r lg:border-t">
         {/* Równa kolumna 287px wyśrodkowana w panelu 336px (49px marginesu).
             Nagłówek, pole wyszukiwania i lista mają tę samą lewą i prawą krawędź.
             pt-8 daje 32px odstępu POD linią navbara, zanim zacznie się nagłówek. */}
