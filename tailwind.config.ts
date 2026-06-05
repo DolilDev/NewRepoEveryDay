@@ -24,6 +24,7 @@ const config: Config = {
           green: "var(--color-success)",
           "green-hover": "var(--color-success)",
           blue: "var(--color-accent)",
+          "link-muted": "var(--color-link-muted)",
           purple: "var(--color-purple)",
         },
         calendar: {
