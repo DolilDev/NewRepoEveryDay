@@ -43,7 +43,7 @@ export default function Header() {
       {/* Pełna szerokość okna — bez wyśrodkowanego kontenera, by elementy
           dosięgały skrajnych rogów (padding boczny 16px). */}
       <div
-        className={`flex items-center justify-between gap-4 px-4 ${
+        className={`relative top-[2px] flex items-center justify-between gap-4 px-4 ${
           isHome ? "h-16" : "h-[52px]"
         }`}
       >
