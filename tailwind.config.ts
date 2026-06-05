@@ -13,6 +13,7 @@ const config: Config = {
         gh: {
           bg: "var(--color-canvas)",
           "bg-deep": "var(--color-canvas-deep)",
+          panel: "var(--color-panel)",
           surface: "var(--color-surface)",
           surface2: "var(--color-hover)",
           border: "var(--color-border)",

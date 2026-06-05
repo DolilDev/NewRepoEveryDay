@@ -7,8 +7,9 @@
    Żadnych innych, losowych kolorów w komponentach.
    ========================================================================= */
 :root {
-  --color-canvas: #0d1117; /* tło paneli (lewy/prawy), pola */
+  --color-canvas: #0d1117; /* pola/inputy (np. wyszukiwarki) */
   --color-canvas-deep: #010409; /* głębokie tło: body, navbar, środek, stopka */
+  --color-panel: #0c1015; /* tło paneli bocznych: lewy i prawy */
   --color-surface: #161b22; /* karty, panele, navbar */
   --color-hover: #21262d; /* hover, aktywne elementy, pola */
   --color-fg: #e6edf3; /* tekst główny */
