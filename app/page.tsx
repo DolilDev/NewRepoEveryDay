@@ -46,9 +46,10 @@ export default function DashboardPage() {
           ale jej nie przesuwa (jest poza zwykłym przepływem). */}
       <aside className="flex flex-col border-b border-gh-border bg-gh-bg lg:fixed lg:bottom-0 lg:left-0 lg:top-16 lg:z-10 lg:w-[336px] lg:border-b-0 lg:border-r lg:border-t">
         {/* Równa kolumna 287px wyśrodkowana w panelu 336px (49px marginesu).
-            Nagłówek, pole wyszukiwania i lista mają tę samą lewą i prawą krawędź. */}
-        <div className="mx-auto flex w-[287px] flex-1 flex-col lg:min-h-0">
-          <header className="pt-4 pb-3 text-sm font-semibold text-gh-text">
+            Nagłówek, pole wyszukiwania i lista mają tę samą lewą i prawą krawędź.
+            pt-4 daje 16px odstępu POD linią navbara, zanim zacznie się nagłówek. */}
+        <div className="mx-auto flex w-[287px] flex-1 flex-col pt-4 lg:min-h-0">
+          <header className="pb-3 text-sm font-semibold text-gh-text">
             Twoje ostatnie projekty
           </header>
           {/* Sztywne pole 287×32px — nie rozciąga się ani nie kurczy. */}
