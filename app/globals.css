@@ -18,6 +18,7 @@
   --color-border: #30363d; /* obramowania */
   --color-border-subtle: #21262d; /* delikatne linie */
   --color-accent: #58a6ff; /* linki, nazwy repo */
+  --color-tab-active: #f78166; /* dolna linia aktywnej zakładki (Overview itd.) */
   --color-link-muted: #9898a1; /* wyciszony link, np. "Zobacz historię" */
   --color-success: #3fb950; /* zielony przycisk / sukces */
   --color-purple: #a371f7; /* placeholder avatara */

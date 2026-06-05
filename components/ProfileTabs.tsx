@@ -48,7 +48,7 @@ export default function ProfileTabs() {
             aria-current={active ? "page" : undefined}
             className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-2 pb-2 text-sm transition-colors ${
               active
-                ? "border-gh-text font-semibold text-gh-text"
+                ? "border-gh-tab-active font-semibold text-gh-text"
                 : "border-transparent text-gh-muted hover:text-gh-text"
             }`}
           >
