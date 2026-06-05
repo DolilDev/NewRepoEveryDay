@@ -47,18 +47,19 @@ export default function Header() {
 
         {/* Prawa strona: Ranking → dzwonek → avatar */}
         <div className="flex items-center gap-4">
-          {/* Zakładka Ranking — element nawigacji navbara */}
+          {/* Zakładka Ranking — ikona w obramowaniu, jak powiadomienia */}
           <Link
             href="/leaderboard"
             aria-current={rankingActive ? "page" : undefined}
-            className={`inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm transition-colors ${
+            aria-label="Ranking"
+            title="Ranking"
+            className={`inline-flex h-8 w-8 items-center justify-center rounded-md border border-gh-border transition-colors ${
               rankingActive
-                ? "bg-gh-surface2 font-semibold text-gh-text"
+                ? "bg-gh-surface2 text-gh-text"
                 : "text-gh-muted hover:bg-gh-surface2 hover:text-gh-text"
             }`}
           >
             <GraphIcon />
-            <span>Ranking</span>
           </Link>
 
           {/* Powiadomienia (ozdobne, nieaktywne) */}
