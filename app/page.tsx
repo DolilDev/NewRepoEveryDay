@@ -104,8 +104,8 @@ export default function DashboardPage() {
       {/* WYŚRODKOWANY KONTENER TREŚCI (max 1280px) — tylko środek + prawy panel. */}
       <div className="mx-auto max-w-[1280px] px-6 py-6">
         <div className="flex flex-col gap-6 lg:flex-row">
-          {/* ŚRODEK — generowanie / realizacja questa */}
-          <section className="min-w-0 flex-1">
+          {/* ŚRODEK — generowanie / realizacja questa (głębokie tło #010409) */}
+          <section className="min-w-0 flex-1 bg-gh-bg-deep">
             {/* Przełącznik testowy stanu A/B */}
             <div className="mb-4 flex items-center justify-end gap-2 text-xs text-gh-subtle">
               <span className="hidden sm:inline">Podgląd (test):</span>

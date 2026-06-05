@@ -12,6 +12,7 @@ const config: Config = {
         // GitHub dark (Primer) — każdy kolor pochodzi ze zmiennej CSS z globals.css.
         gh: {
           bg: "var(--color-canvas)",
+          "bg-deep": "var(--color-canvas-deep)",
           surface: "var(--color-surface)",
           surface2: "var(--color-hover)",
           border: "var(--color-border)",

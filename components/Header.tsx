@@ -43,7 +43,7 @@ export default function Header() {
   const rankingActive = pathname.startsWith("/leaderboard");
 
   return (
-    <header className="border-b border-gh-border bg-gh-surface">
+    <header className="border-b border-gh-border bg-gh-bg-deep">
       {/* Pełna szerokość okna — bez wyśrodkowanego kontenera, by elementy
           dosięgały skrajnych rogów (padding boczny 16px). */}
       <div className="flex h-16 items-center justify-between gap-4 px-4">
