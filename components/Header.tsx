@@ -37,7 +37,9 @@ export default function Header() {
   const isHome = pathname === "/";
 
   return (
-    <header className="bg-gh-bg-deep">
+    <header
+      className={`bg-gh-bg-deep ${isHome ? "border-b border-gh-border" : ""}`}
+    >
       {/* Pełna szerokość okna — bez wyśrodkowanego kontenera, by elementy
           dosięgały skrajnych rogów (padding boczny 16px). */}
       <div
