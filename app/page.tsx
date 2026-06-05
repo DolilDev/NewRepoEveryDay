@@ -258,27 +258,26 @@ export default function DashboardPage() {
                   Ostatnie questy
                 </header>
 
-                {/* Oś czasu: ciągła pionowa linia (#30363d) z kropką-węzłem
-                    przy każdej pozycji; tekst odsunięty w prawo (gap-3). */}
-                <ol>
-                  {recentQuests.map((q, i) => {
-                    const isFirst = i === 0;
-                    const isLast = i === recentQuests.length - 1;
-                    return (
-                      <li key={q.id} className="flex gap-3">
-                        {/* Lewa kolumna osi: odcinek nad kropką (łączy z poprzednią
-                            pozycją, dla pierwszej niewidoczny), kropka i odcinek
-                            pod kropką (rośnie do następnej, brak dla ostatniej). */}
+                {/* Oś czasu: JEDNA ciągła pionowa linia (#30363d) biegnąca od
+                    pierwszej kropki aż do dołu obszaru zawartości panelu (nie
+                    urywa się na ostatnim queście). Kropki to węzły siedzące na
+                    osi, tekst odsunięty w prawo (gap-3). */}
+                <div className="relative">
+                  <span
+                    aria-hidden
+                    className="absolute bottom-0 left-[4px] top-2 w-px bg-gh-border"
+                  />
+
+                  <ol>
+                    {recentQuests.map((q) => (
+                      <li key={q.id} className="flex gap-3 pb-6">
+                        {/* Kropka-węzeł na osi (linia przechodzi przez jej środek) */}
                         <div className="flex flex-col items-center" aria-hidden>
-                          <span
-                            className={`h-1 w-px ${isFirst ? "" : "bg-gh-border"}`}
-                          />
-                          <span className="h-[9px] w-[9px] shrink-0 rounded-full bg-gh-border" />
-                          {!isLast && <span className="w-px grow bg-gh-border" />}
+                          <span className="mt-1 h-[9px] w-[9px] shrink-0 rounded-full bg-gh-border" />
                         </div>
 
                         {/* Treść pozycji: czas / tytuł / nazwa repo (3 linijki) */}
-                        <div className={`min-w-0 flex-1 ${isLast ? "" : "pb-6"}`}>
+                        <div className="min-w-0 flex-1">
                           <div className="text-xs text-gh-muted">{q.relativeDate}</div>
                           <div className="mt-1 text-sm text-gh-text">{q.title}</div>
                           <div className="truncate font-mono text-xs text-gh-muted">
@@ -286,17 +285,18 @@ export default function DashboardPage() {
                           </div>
                         </div>
                       </li>
-                    );
-                  })}
-                </ol>
+                    ))}
+                  </ol>
 
-                {/* Link do pełnej historii */}
-                <a
-                  href="#"
-                  className="mt-4 inline-block text-sm text-gh-blue hover:underline"
-                >
-                  Zobacz historię →
-                </a>
+                  {/* Link do pełnej historii — wyrównany do kolumny tekstu,
+                      oś biegnie po jego lewej stronie aż do dołu. */}
+                  <a
+                    href="#"
+                    className="ml-[21px] inline-block text-sm text-gh-blue hover:underline"
+                  >
+                    Zobacz historię →
+                  </a>
+                </div>
               </div>
             </aside>
           )}
