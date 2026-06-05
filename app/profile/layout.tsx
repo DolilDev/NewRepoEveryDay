@@ -12,8 +12,9 @@ export default function ProfileLayout({
   return (
     <div className="flex-1 bg-gh-panel">
       {/* Drugi pasek nawigacji — ciągnie się przez całą szerokość strony.
-          Padding px-4 jak w navbarze, by zakładki zaczynały się pod logiem. */}
-      <div className="border-b border-gh-border">
+          Padding px-4 jak w navbarze, by zakładki zaczynały się pod logiem.
+          Tło #010409 jak górny navbar (treść profilu niżej zostaje #0C1015). */}
+      <div className="border-b border-gh-border bg-gh-bg-deep">
         <div className="px-4">
           <ProfileTabs />
         </div>
