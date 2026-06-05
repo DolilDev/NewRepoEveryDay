@@ -76,7 +76,7 @@ export default function DashboardPage() {
                 <li key={p.id}>
                   <a
                     href="#"
-                    className="group flex min-w-0 flex-col gap-1 py-2 transition-colors hover:bg-gh-surface2"
+                    className="group flex min-w-0 flex-col gap-1 py-2"
                   >
                     <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gh-text">
                       <RepoIcon />
