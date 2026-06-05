@@ -276,13 +276,19 @@ export default function DashboardPage() {
                           <span className="mt-1 h-[9px] w-[9px] shrink-0 rounded-full bg-gh-border" />
                         </div>
 
-                        {/* Treść pozycji: czas / tytuł / nazwa repo (3 linijki) */}
+                        {/* Treść pozycji: czas (poza linkiem) + klikalny odnośnik
+                            obejmujący tytuł i nazwę repo. Hover: obie linijki na
+                            niebiesko (#58a6ff) z podkreśleniem, bez zmiany tła. */}
                         <div className="min-w-0 flex-1">
                           <div className="text-xs text-gh-muted">{q.relativeDate}</div>
-                          <div className="mt-1 text-sm text-gh-text">{q.title}</div>
-                          <div className="truncate font-mono text-xs text-gh-muted">
-                            {q.repoName}
-                          </div>
+                          <a href="#" className="group mt-1 block no-underline">
+                            <div className="text-sm text-gh-text transition-colors group-hover:text-gh-blue group-hover:underline">
+                              {q.title}
+                            </div>
+                            <div className="truncate font-mono text-xs text-gh-muted transition-colors group-hover:text-gh-blue group-hover:underline">
+                              {q.repoName}
+                            </div>
+                          </a>
                         </div>
                       </li>
                     ))}
