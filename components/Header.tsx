@@ -33,12 +33,18 @@ function BellIcon() {
 export default function Header() {
   const pathname = usePathname();
   const rankingActive = pathname.startsWith("/leaderboard");
+  // Tylko strona główna ma wyższy navbar (64px); pozostałe strony 52px.
+  const isHome = pathname === "/";
 
   return (
     <header className="bg-gh-bg-deep">
       {/* Pełna szerokość okna — bez wyśrodkowanego kontenera, by elementy
           dosięgały skrajnych rogów (padding boczny 16px). */}
-      <div className="flex h-[52px] items-center justify-between gap-4 px-4">
+      <div
+        className={`flex items-center justify-between gap-4 px-4 ${
+          isHome ? "h-16" : "h-[52px]"
+        }`}
+      >
         {/* Lewa strona: logo + nazwa */}
         <Link href="/" className="flex items-center gap-2 text-base font-semibold text-gh-text">
           <FlameLogo />
