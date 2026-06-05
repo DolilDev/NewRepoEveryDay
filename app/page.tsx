@@ -250,27 +250,53 @@ export default function DashboardPage() {
             )}
           </section>
 
-          {/* PRAWY PANEL — Ostatnie questy (max 5; ukryty, gdy pusto) */}
+          {/* PRAWY PANEL — Ostatnie questy: oś czasu z kropkami (max 5; ukryty, gdy pusto) */}
           {recentQuests.length > 0 && (
             <aside className="lg:w-[300px] lg:shrink-0">
-              <div className="overflow-hidden rounded-md border border-gh-border bg-gh-panel">
-                <header className="border-b border-gh-border px-4 py-4 text-sm font-semibold text-gh-text">
+              <div className="rounded-md border border-gh-border bg-gh-panel p-4">
+                <header className="mb-4 text-sm font-semibold text-gh-text">
                   Ostatnie questy
                 </header>
-                <ul>
-                  {recentQuests.map((q) => (
-                    <li
-                      key={q.id}
-                      className="border-b border-gh-border-muted px-4 py-4 last:border-b-0"
-                    >
-                      <div className="text-xs text-gh-subtle">{q.relativeDate}</div>
-                      <div className="mt-1 text-sm text-gh-text">{q.title}</div>
-                      <div className="truncate font-mono text-xs text-gh-muted">
-                        {q.repoName}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+
+                {/* Oś czasu: ciągła pionowa linia (#30363d) z kropką-węzłem
+                    przy każdej pozycji; tekst odsunięty w prawo (gap-3). */}
+                <ol>
+                  {recentQuests.map((q, i) => {
+                    const isFirst = i === 0;
+                    const isLast = i === recentQuests.length - 1;
+                    return (
+                      <li key={q.id} className="flex gap-3">
+                        {/* Lewa kolumna osi: odcinek nad kropką (łączy z poprzednią
+                            pozycją, dla pierwszej niewidoczny), kropka i odcinek
+                            pod kropką (rośnie do następnej, brak dla ostatniej). */}
+                        <div className="flex flex-col items-center" aria-hidden>
+                          <span
+                            className={`h-1 w-px ${isFirst ? "" : "bg-gh-border"}`}
+                          />
+                          <span className="h-[9px] w-[9px] shrink-0 rounded-full bg-gh-border" />
+                          {!isLast && <span className="w-px grow bg-gh-border" />}
+                        </div>
+
+                        {/* Treść pozycji: czas / tytuł / nazwa repo (3 linijki) */}
+                        <div className={`min-w-0 flex-1 ${isLast ? "" : "pb-6"}`}>
+                          <div className="text-xs text-gh-muted">{q.relativeDate}</div>
+                          <div className="mt-1 text-sm text-gh-text">{q.title}</div>
+                          <div className="truncate font-mono text-xs text-gh-muted">
+                            {q.repoName}
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+
+                {/* Link do pełnej historii */}
+                <a
+                  href="#"
+                  className="mt-4 inline-block text-sm text-gh-blue hover:underline"
+                >
+                  Zobacz historię →
+                </a>
               </div>
             </aside>
           )}
