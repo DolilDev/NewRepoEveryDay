@@ -282,10 +282,10 @@ export default function DashboardPage() {
                         <div className="min-w-0 flex-1">
                           <div className="text-xs text-gh-muted">{q.relativeDate}</div>
                           <a href="#" className="group mt-1 block no-underline">
-                            <div className="text-sm text-gh-text transition-colors group-hover:text-gh-blue group-hover:underline">
+                            <div className="text-sm text-gh-text group-hover:text-gh-blue group-hover:underline">
                               {q.title}
                             </div>
-                            <div className="truncate font-mono text-xs text-gh-muted transition-colors group-hover:text-gh-blue group-hover:underline">
+                            <div className="truncate font-mono text-xs text-gh-muted group-hover:text-gh-blue group-hover:underline">
                               {q.repoName}
                             </div>
                           </a>
