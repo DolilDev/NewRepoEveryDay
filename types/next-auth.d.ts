@@ -18,5 +18,8 @@ declare module "@auth/core/jwt" {
   interface JWT {
     login?: string;
     github?: GitHubProfile;
+    // Token OAuth GitHuba — trzymany TYLKO w zaszyfrowanym JWT po stronie serwera,
+    // odczytywany w serwerowych API routes. Nigdy nie trafia do sesji/przeglądarki.
+    accessToken?: string;
   }
 }

@@ -25,6 +25,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Po zalogowaniu dociągamy pełny profil z GitHub REST API tokenem OAuth.
       // Robimy to TU (po stronie serwera) — token nie wychodzi poza warstwę auth.
       if (account?.access_token) {
+        // Token zapisujemy w ZASZYFROWANYM JWT (ciasteczko sesji). Służy do
+        // zapisów na GitHubie z serwerowych API routes. NIE trafia do sesji
+        // wysyłanej do przeglądarki (patrz callback session niżej).
+        token.accessToken = account.access_token;
         const gh = await fetchGitHubProfile(account.access_token);
         if (gh) token.github = gh;
       }
