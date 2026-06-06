@@ -252,6 +252,11 @@ const PL_MONTHS_SHORT = [
   "lip", "sie", "wrz", "paź", "lis", "gru",
 ];
 
+const PL_MONTHS_NOMINATIVE = [
+  "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec",
+  "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień",
+];
+
 export function formatPlDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   return `${d} ${PL_MONTHS_GENITIVE[m - 1]} ${y}`;
@@ -259,6 +264,15 @@ export function formatPlDate(iso: string): string {
 
 export function shortMonth(monthIndex: number): string {
   return PL_MONTHS_SHORT[monthIndex];
+}
+
+// Miesiąc + rok po polsku, np. "marzec 2021" (dla daty dołączenia z GitHuba).
+// Przyjmuje pełny ISO 8601 (np. "2011-03-25T18:44:36Z"); UTC, by uniknąć
+// przesunięcia o dzień przy granicy miesiąca.
+export function formatPlMonthYear(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${PL_MONTHS_NOMINATIVE[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
 // ===========================================================================
