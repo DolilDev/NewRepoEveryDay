@@ -1,11 +1,33 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import Avatar from "@/components/Avatar";
 import { currentUser, leaderboard } from "@/lib/mock-data";
 
 export default function LeaderboardPage() {
+  const [query, setQuery] = useState("");
+
   // Sortowanie po streaku malejąco, rozstrzygnięcie po liczbie questów.
-  const ranked = [...leaderboard].sort(
-    (a, b) => b.currentStreak - a.currentStreak || b.totalQuests - a.totalQuests,
+  // Ranga liczona z pełnej tabeli, żeby filtrowanie nie zmieniało numerów.
+  const ranked = useMemo(
+    () =>
+      [...leaderboard]
+        .sort(
+          (a, b) =>
+            b.currentStreak - a.currentStreak || b.totalQuests - a.totalQuests,
+        )
+        .map((player, i) => ({ player, rank: i + 1 })),
+    [],
   );
+
+  const q = query.trim().toLowerCase();
+  const visible = q
+    ? ranked.filter(
+        ({ player }) =>
+          player.name.toLowerCase().includes(q) ||
+          player.login.toLowerCase().includes(q),
+      )
+    : ranked;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-6">
@@ -15,6 +37,15 @@ export default function LeaderboardPage() {
           Globalna tabela liderów — sortowana po aktualnym streaku.
         </p>
       </div>
+
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Szukaj gracza po nazwie lub @loginie…"
+        aria-label="Szukaj gracza"
+        className="h-9 w-full rounded-md border border-gh-border bg-gh-bg px-3 text-sm text-gh-text placeholder:text-gh-subtle focus:border-gh-blue focus:outline-none"
+      />
 
       <div className="overflow-hidden rounded-md border border-gh-border">
         <table className="w-full border-collapse text-sm">
@@ -30,10 +61,9 @@ export default function LeaderboardPage() {
             </tr>
           </thead>
           <tbody>
-            {ranked.map((player, i) => {
+            {visible.map(({ player, rank }) => {
               const isMe = player.id === currentUser.id;
-              const rank = i + 1;
-              const medal = ["🥇", "🥈", "🥉"][i];
+              const medal = ["🥇", "🥈", "🥉"][rank - 1];
               return (
                 <tr
                   key={player.id}
@@ -79,6 +109,16 @@ export default function LeaderboardPage() {
                 </tr>
               );
             })}
+            {visible.length === 0 && (
+              <tr className="border-t border-gh-border bg-gh-surface">
+                <td
+                  colSpan={5}
+                  className="px-4 py-8 text-center text-sm text-gh-muted"
+                >
+                  Brak graczy pasujących do „{query.trim()}”.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
