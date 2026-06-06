@@ -1,7 +1,12 @@
 // Lewa kolumna profilu — stała przy obu zakładkach (Overview / Repositories).
 import Avatar from "./Avatar";
 import { auth } from "@/auth";
-import { achievements, currentUser, formatPlDate } from "@/lib/mock-data";
+import {
+  achievements,
+  currentUser,
+  formatPlDate,
+  formatPlMonthYear,
+} from "@/lib/mock-data";
 
 function PeopleIcon() {
   return (
@@ -23,15 +28,33 @@ export default async function ProfileSidebar() {
   // GitHub pokazuje wyłącznie zdobyte osiągnięcia — bez wyszarzonych „zablokowanych".
   const unlocked = achievements.filter((a) => a.unlocked);
 
-  // Prawdziwe dane konta z sesji (avatar/nazwa/login). Reszta na razie mockowa.
+  // Prawdziwe dane konta z sesji (avatar/nazwa/login) + profil z GitHub API.
+  // Gdy brak sesji — fallback na mocki. Streak/ranking/osiągnięcia zostają mockowe.
   const session = await auth();
   const user = session?.user;
+  const gh = user?.github;
+
   const name = user?.name ?? currentUser.name;
   const login = user?.login ?? currentUser.login;
   const image = user?.image ?? undefined;
   const profileUrl = user?.login
     ? `https://github.com/${user.login}`
     : currentUser.profileUrl;
+
+  // Bio z GitHuba (może być puste → stan pusty); bez sesji pokazujemy mock.
+  const bio = gh ? gh.bio : currentUser.bio;
+  // Liczniki: realne z GitHuba albo mockowe. Realne formatujemy po polsku.
+  const followers = gh
+    ? gh.followers.toLocaleString("pl-PL")
+    : currentUser.followers;
+  const following = gh
+    ? gh.following.toLocaleString("pl-PL")
+    : currentUser.following;
+  // Data dołączenia: do GitHuba (jeśli zalogowany) albo do DailyQuest (mock).
+  const joinedLabel =
+    gh?.createdAt && formatPlMonthYear(gh.createdAt)
+      ? `Dołączył(a) ${formatPlMonthYear(gh.createdAt)}`
+      : `Dołączył do DailyQuest ${formatPlDate(currentUser.joinedDate)}`;
 
   return (
     <aside className="w-full shrink-0 md:w-[296px]">
@@ -48,25 +71,25 @@ export default async function ProfileSidebar() {
           {login}
         </a>
 
-        <p className="mt-4 text-sm text-gh-text">{currentUser.bio}</p>
+        {bio ? (
+          <p className="mt-4 text-sm text-gh-text">{bio}</p>
+        ) : (
+          <p className="mt-4 text-sm italic text-gh-muted">Brak opisu.</p>
+        )}
 
         <div className="mt-4 flex items-center gap-2 text-sm text-gh-muted">
           <PeopleIcon />
           <span>
-            <span className="font-semibold text-gh-text">
-              {currentUser.followers}
-            </span>{" "}
+            <span className="font-semibold text-gh-text">{followers}</span>{" "}
             followers ·{" "}
-            <span className="font-semibold text-gh-text">
-              {currentUser.following}
-            </span>{" "}
+            <span className="font-semibold text-gh-text">{following}</span>{" "}
             following
           </span>
         </div>
 
         <div className="mt-2 flex items-center gap-2 text-sm text-gh-muted">
           <CalendarIcon />
-          <span>Dołączył do DailyQuest {formatPlDate(currentUser.joinedDate)}</span>
+          <span>{joinedLabel}</span>
         </div>
       </div>
 
