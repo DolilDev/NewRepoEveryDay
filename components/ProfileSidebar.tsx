@@ -1,5 +1,6 @@
 // Lewa kolumna profilu — stała przy obu zakładkach (Overview / Repositories).
 import Avatar from "./Avatar";
+import { auth } from "@/auth";
 import { achievements, currentUser, formatPlDate } from "@/lib/mock-data";
 
 function PeopleIcon() {
@@ -18,23 +19,33 @@ function CalendarIcon() {
   );
 }
 
-export default function ProfileSidebar() {
+export default async function ProfileSidebar() {
   // GitHub pokazuje wyłącznie zdobyte osiągnięcia — bez wyszarzonych „zablokowanych".
   const unlocked = achievements.filter((a) => a.unlocked);
+
+  // Prawdziwe dane konta z sesji (avatar/nazwa/login). Reszta na razie mockowa.
+  const session = await auth();
+  const user = session?.user;
+  const name = user?.name ?? currentUser.name;
+  const login = user?.login ?? currentUser.login;
+  const image = user?.image ?? undefined;
+  const profileUrl = user?.login
+    ? `https://github.com/${user.login}`
+    : currentUser.profileUrl;
 
   return (
     <aside className="w-full shrink-0 md:w-[296px]">
       <div className="flex flex-col items-center text-center md:items-start md:text-left">
-        <Avatar name={currentUser.name} login={currentUser.login} size={260} />
+        <Avatar name={name} login={login} image={image} size={260} />
 
         <h1 className="mt-4 text-2xl font-bold leading-tight text-gh-text">
-          {currentUser.name}
+          {name}
         </h1>
         <a
-          href={currentUser.profileUrl}
+          href={profileUrl}
           className="text-xl font-light text-gh-muted hover:text-gh-blue hover:underline"
         >
-          {currentUser.login}
+          {login}
         </a>
 
         <p className="mt-4 text-sm text-gh-text">{currentUser.bio}</p>
