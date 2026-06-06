@@ -30,7 +30,7 @@ export default function LeaderboardPage() {
     : ranked;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-6 py-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-6 py-6">
       <div>
         <h1 className="text-2xl font-semibold text-gh-text">Ranking</h1>
         <p className="text-sm text-gh-muted">
@@ -51,13 +51,13 @@ export default function LeaderboardPage() {
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="bg-gh-surface2 text-left text-xs uppercase tracking-wide text-gh-muted">
-              <th className="w-12 px-4 py-4 text-center font-semibold">#</th>
-              <th className="px-4 py-4 font-semibold">Gracz</th>
-              <th className="px-4 py-4 text-right font-semibold">Streak</th>
-              <th className="hidden px-4 py-4 text-right font-semibold sm:table-cell">
+              <th className="w-12 px-4 py-2 text-center font-semibold">#</th>
+              <th className="px-4 py-2 font-semibold">Gracz</th>
+              <th className="px-4 py-2 text-right font-semibold">Streak</th>
+              <th className="hidden px-4 py-2 text-right font-semibold sm:table-cell">
                 Questy
               </th>
-              <th className="px-4 py-4 text-right font-semibold">Punkty</th>
+              <th className="px-4 py-2 text-right font-semibold">Punkty</th>
             </tr>
           </thead>
           <tbody>
@@ -71,10 +71,10 @@ export default function LeaderboardPage() {
                     isMe ? "bg-gh-surface2" : "bg-gh-surface hover:bg-gh-surface2"
                   }`}
                 >
-                  <td className="px-4 py-4 text-center font-mono text-gh-muted">
+                  <td className="px-4 py-2 text-center font-mono text-gh-muted">
                     {medal ?? rank}
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-2">
                     <div className="flex items-center gap-4">
                       <Avatar name={player.name} login={player.login} size={28} />
                       <div className="min-w-0">
@@ -97,13 +97,13 @@ export default function LeaderboardPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-right font-semibold text-gh-text">
+                  <td className="px-4 py-2 text-right font-semibold text-gh-text">
                     🔥 {player.currentStreak}
                   </td>
-                  <td className="hidden px-4 py-4 text-right text-gh-muted sm:table-cell">
+                  <td className="hidden px-4 py-2 text-right text-gh-muted sm:table-cell">
                     {player.totalQuests}
                   </td>
-                  <td className="px-4 py-4 text-right font-semibold text-gh-text">
+                  <td className="px-4 py-2 text-right font-semibold text-gh-text">
                     {player.points.toLocaleString("pl-PL")}
                   </td>
                 </tr>
