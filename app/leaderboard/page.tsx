@@ -30,7 +30,7 @@ export default function LeaderboardPage() {
     : ranked;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-6 py-6">
+    <div className="mx-auto max-w-7xl space-y-6 px-6 py-6">
       <div>
         <h1 className="text-2xl font-semibold text-gh-text">Ranking</h1>
         <p className="text-sm text-gh-muted">
