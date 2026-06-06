@@ -1,5 +1,5 @@
-// Placeholder avatara: fioletowe kółko z inicjałami (Primer: --color-purple).
-// W kolejnym etapie podmienimy na <img src={avatarUrl}> z GitHuba.
+// Avatar gracza: jeśli dostaniemy prawdziwy obrazek z GitHuba (avatar_url) —
+// renderujemy <img>. W przeciwnym razie fallback: fioletowe kółko z inicjałami.
 
 function initials(name: string): string {
   return name
@@ -13,12 +13,28 @@ function initials(name: string): string {
 
 export default function Avatar({
   name,
+  image,
   size = 40,
 }: {
   name: string;
   login: string;
+  image?: string | null;
   size?: number;
 }) {
+  if (image) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={image}
+        alt=""
+        width={size}
+        height={size}
+        style={{ width: size, height: size }}
+        className="inline-block shrink-0 select-none rounded-full object-cover"
+      />
+    );
+  }
+
   return (
     <span
       aria-hidden
