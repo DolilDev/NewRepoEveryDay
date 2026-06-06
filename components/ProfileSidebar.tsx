@@ -71,11 +71,8 @@ export default async function ProfileSidebar() {
           {login}
         </a>
 
-        {bio ? (
-          <p className="mt-4 text-sm text-gh-text">{bio}</p>
-        ) : (
-          <p className="mt-4 text-sm italic text-gh-muted">Brak opisu.</p>
-        )}
+        {/* Bio renderujemy tylko, gdy faktycznie istnieje — brak opisu = brak elementu. */}
+        {bio && <p className="mt-4 text-sm text-gh-text">{bio}</p>}
 
         <div className="mt-4 flex items-center gap-2 text-sm text-gh-muted">
           <PeopleIcon />
