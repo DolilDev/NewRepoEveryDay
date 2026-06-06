@@ -164,9 +164,21 @@ export async function generateRepoName(
   return name;
 }
 
+// Stała sekcja README — identyczna w każdym QUEST.md, dodawana w kodzie
+// (NIE generowana przez model).
+const README_SECTION = `## README (wymagane)
+W repozytorium utwórz plik \`README.md\` napisany **po angielsku**, opisujący projekt:
+co to jest, jak go uruchomić oraz czego użyto (języki, biblioteki, narzędzia).
+To wymóg obowiązkowy dla każdego questa.`;
+
+// Stałe kryterium dotyczące README — doklejane do listy niezależnie od modelu.
+const README_CRITERION = "Repozytorium zawiera plik README.md napisany po angielsku";
+
 // Buduje treść pliku QUEST.md z wygenerowanego questa (ładny markdown).
 export function buildQuestMarkdown(quest: QuestSpec): string {
-  const criteria = quest.criteria.map((c) => `- [ ] ${c}`).join("\n");
+  // Stałe kryterium README dokładamy na sztywno, nie polegając na modelu.
+  const allCriteria = [...quest.criteria, README_CRITERION];
+  const criteria = allCriteria.map((c) => `- [ ] ${c}`).join("\n");
   return `# ${quest.title}
 
 ## Dlaczego to zadanie
@@ -177,6 +189,8 @@ ${quest.instructions}
 
 ## Dodaj coś od siebie
 ${quest.openPart || "—"}
+
+${README_SECTION}
 
 ## Kryteria zaliczenia
 ${criteria}
