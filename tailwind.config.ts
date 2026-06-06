@@ -23,6 +23,7 @@ const config: Config = {
           subtle: "var(--color-fg-subtle)",
           green: "var(--color-success)",
           "green-hover": "var(--color-success)",
+          red: "var(--color-danger)",
           blue: "var(--color-accent)",
           "tab-active": "var(--color-tab-active)",
           "link-muted": "var(--color-link-muted)",

@@ -21,6 +21,7 @@
   --color-tab-active: #f78166; /* dolna linia aktywnej zakładki (Overview itd.) */
   --color-link-muted: #9898a1; /* wyciszony link, np. "Zobacz historię" */
   --color-success: #3fb950; /* zielony przycisk / sukces */
+  --color-danger: #f85149; /* błędy / stan czerwony */
   --color-purple: #a371f7; /* placeholder avatara */
   --color-calendar-done: #39d353; /* kalendarz: pole ukończone */
   --color-calendar-empty: #161b22; /* kalendarz: pole puste */

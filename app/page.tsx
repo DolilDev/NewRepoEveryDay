@@ -1,14 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { signIn, useSession } from "next-auth/react";
 import Countdown from "@/components/Countdown";
-import {
-  currentUser,
-  todayQuest,
-  questProjects,
-  previousQuests,
-  questGeneratedToday,
-} from "@/lib/mock-data";
+import { questProjects, previousQuests } from "@/lib/mock-data";
 
 function RepoIcon() {
   return (
@@ -26,9 +21,63 @@ function SearchIcon() {
   );
 }
 
+function Spinner() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      className="animate-spin text-gh-green"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+type QuestResult = {
+  title: string;
+  repoName: string;
+  repoUrl: string;
+  questFileUrl: string;
+  fileUploaded: boolean;
+};
+
+type Phase = "idle" | "loading" | "success" | "error";
+
+const STORAGE_KEY = "dq:lastQuest";
+
+// Klucz dnia (lokalny) — prosta, kliencka blokada „jeden quest dziennie".
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
 export default function DashboardPage() {
-  const [generated, setGenerated] = useState(questGeneratedToday);
+  const { status: authStatus } = useSession();
+  const isAuthed = authStatus === "authenticated";
+
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [result, setResult] = useState<QuestResult | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
   const [projectQuery, setProjectQuery] = useState("");
+
+  // Po odświeżeniu strony przywracamy dzisiejszy wynik (blokada na dziś).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved?.date === todayKey() && saved?.result) {
+        setResult(saved.result as QuestResult);
+        setPhase("success");
+      }
+    } catch {
+      // brak/uszkodzony wpis — ignorujemy
+    }
+  }, []);
 
   const filteredProjects = useMemo(() => {
     const q = projectQuery.trim().toLowerCase();
@@ -37,6 +86,39 @@ export default function DashboardPage() {
   }, [projectQuery]);
 
   const recentQuests = previousQuests.slice(0, 5);
+
+  async function handleGenerate() {
+    if (phase === "loading") return;
+    // Bez logowania nie ma tokenu do tworzenia repo — kierujemy na logowanie.
+    if (!isAuthed) {
+      signIn("github");
+      return;
+    }
+
+    setPhase("loading");
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/quest/generate", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || `Błąd serwera (${res.status}).`);
+      }
+      const r = data as QuestResult;
+      setResult(r);
+      setPhase("success");
+      try {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ date: todayKey(), result: r }),
+        );
+      } catch {
+        // brak localStorage — blokada zadziała tylko w obrębie sesji strony
+      }
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Nieznany błąd.");
+      setPhase("error");
+    }
+  }
 
   return (
     // Offset z lewej (lg) robi miejsce na panel przyklejony do krawędzi okna.
@@ -106,147 +188,147 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-6 lg:flex-row">
           {/* ŚRODEK — generowanie / realizacja questa (głębokie tło #010409) */}
           <section className="min-w-0 flex-1 bg-gh-bg-deep">
-            {/* Przełącznik testowy stanu A/B */}
-            <div className="mb-4 flex items-center justify-end gap-2 text-xs text-gh-subtle">
-              <span className="hidden sm:inline">Podgląd (test):</span>
-              <div className="inline-flex overflow-hidden rounded-md border border-gh-border">
+            {phase === "loading" ? (
+              // STAN: generowanie w toku
+              <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 text-gh-muted">
+                <Spinner />
+                <p className="text-sm">Generuję quest i tworzę repozytorium…</p>
+                <p className="text-xs text-gh-subtle">To może chwilę potrwać.</p>
+              </div>
+            ) : phase === "error" ? (
+              // STAN: błąd + ponowienie
+              <div className="flex min-h-[420px] flex-col items-center justify-center gap-4 px-4 text-center">
+                <div className="max-w-md rounded-md border border-gh-red/40 bg-gh-red/10 px-4 py-4 text-sm text-gh-text">
+                  <div className="mb-1 font-semibold text-gh-red">
+                    Nie udało się wygenerować questa
+                  </div>
+                  <p className="text-gh-muted">{errorMsg}</p>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setGenerated(false)}
-                  className={`px-2 py-1 ${
-                    !generated
-                      ? "bg-gh-surface2 font-semibold text-gh-text"
-                      : "text-gh-muted hover:text-gh-text"
-                  }`}
+                  onClick={handleGenerate}
+                  className="rounded-md bg-gh-green px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
                 >
-                  Przed
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setGenerated(true)}
-                  className={`border-l border-gh-border px-2 py-1 ${
-                    generated
-                      ? "bg-gh-surface2 font-semibold text-gh-text"
-                      : "text-gh-muted hover:text-gh-text"
-                  }`}
-                >
-                  Po
+                  Spróbuj ponownie
                 </button>
               </div>
-            </div>
-
-            {!generated ? (
-              // STAN A — tylko duży zielony przycisk, na środku
-              <div className="flex min-h-[420px] items-center justify-center">
-                <button
-                  type="button"
-                  onClick={() => setGenerated(true)}
-                  className="rounded-md bg-gh-green px-6 py-4 text-base font-semibold text-white transition hover:brightness-110"
-                >
-                  Wygeneruj dzisiejszy quest
-                </button>
-              </div>
-            ) : (
-              // STAN B — karta questa
+            ) : phase === "success" && result ? (
+              // STAN: repo utworzone
               <article className="overflow-hidden rounded-md border border-gh-border bg-gh-surface">
                 <header className="flex items-center justify-between border-b border-gh-border bg-gh-surface2 px-4 py-4">
                   <span className="text-xs font-semibold uppercase tracking-wide text-gh-muted">
                     Dzisiejszy quest
                   </span>
                   <span className="rounded-full border border-gh-green/40 bg-gh-green/10 px-2 py-1 text-xs font-semibold text-gh-green">
-                    Oczekuje na zgłoszenie
+                    Repo utworzone
                   </span>
                 </header>
 
                 <div className="space-y-4 p-4">
+                  <div className="rounded-md border border-gh-green/40 bg-gh-green/10 px-4 py-3 text-sm text-gh-text">
+                    ✅ Repo zostało utworzone — cała instrukcja questa jest w nim
+                    (plik <span className="font-mono">QUEST.md</span>).
+                  </div>
+
                   <h2 className="text-xl font-semibold text-gh-text">
-                    {todayQuest.title}
+                    {result.title}
                   </h2>
 
-                  {/* Pełna instrukcja */}
+                  {/* Nazwa repo */}
                   <div>
                     <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-gh-muted">
-                      Pełna instrukcja
+                      Twoje repozytorium
                     </div>
-                    <p className="leading-relaxed text-gh-muted">
-                      {todayQuest.description}
-                    </p>
-                  </div>
-
-                  {/* Narzucona nazwa repo */}
-                  <div>
-                    <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-gh-muted">
-                      Narzucona nazwa repozytorium
-                    </div>
-                    <div className="flex items-stretch overflow-hidden rounded-md border border-gh-border">
-                      <span className="flex items-center gap-2 border-r border-gh-border bg-gh-surface2 px-2 py-2 text-sm text-gh-muted">
-                        <RepoIcon />
-                        github.com/{currentUser.login}/
+                    <div className="flex items-center gap-2 rounded-md border border-gh-border bg-gh-bg px-3 py-2">
+                      <RepoIcon />
+                      <span className="truncate font-mono text-sm text-gh-text">
+                        {result.repoName}
                       </span>
-                      <input
-                        type="text"
-                        readOnly
-                        value={todayQuest.repoName}
-                        aria-label="Narzucona nazwa repozytorium"
-                        className="min-w-0 flex-1 cursor-default bg-gh-bg px-2 py-2 font-mono text-sm text-gh-text focus:outline-none"
-                      />
                     </div>
                   </div>
 
-                  {/* Kryteria zaliczenia */}
-                  <div>
-                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gh-muted">
-                      Kryteria zaliczenia
-                    </div>
-                    <ul className="space-y-2">
-                      {todayQuest.criteria.map((c, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm">
-                          <span
-                            className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-gh-border bg-gh-bg"
-                            aria-hidden
-                          />
-                          <span className="text-gh-text">{c}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  {/* Linki do GitHuba (nowa karta) */}
+                  <div className="flex flex-wrap gap-2">
+                    <a
+                      href={result.repoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-md bg-gh-green px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
+                    >
+                      Otwórz repozytorium na GitHubie ↗
+                    </a>
+                    {result.fileUploaded && (
+                      <a
+                        href={result.questFileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 rounded-md border border-gh-border bg-gh-surface px-4 py-2 text-sm font-semibold text-gh-text transition-colors hover:bg-gh-surface2"
+                      >
+                        Zobacz QUEST.md ↗
+                      </a>
+                    )}
                   </div>
 
-                  {/* Część otwarta — zrób coś od siebie */}
-                  <div className="rounded-md border border-gh-green/40 bg-gh-green/10 px-4 py-4">
-                    <div className="mb-1 text-sm font-semibold text-gh-green">
-                      ✨ Twoja swoboda — zrób coś od siebie
-                    </div>
-                    <p className="text-sm text-gh-muted">{todayQuest.openChallenge}</p>
-                  </div>
+                  {!result.fileUploaded && (
+                    <p className="text-xs text-gh-red">
+                      Repo powstało, ale nie udało się dodać pliku QUEST.md —
+                      możesz spróbować wygenerować quest ponownie jutro.
+                    </p>
+                  )}
 
-                  {/* Dlaczego to nowość */}
+                  {/* Jak oddać zadanie (na razie tekstowo) */}
                   <div className="rounded-md border border-gh-border bg-gh-bg px-4 py-4 text-sm">
-                    <span className="font-semibold text-gh-text">
-                      💡 Dlaczego to dla Ciebie nowe:{" "}
-                    </span>
-                    <span className="text-gh-muted">{todayQuest.whyNew}</span>
+                    <div className="mb-1 font-semibold text-gh-text">
+                      Jak oddać zadanie do sprawdzenia
+                    </div>
+                    <p className="text-gh-muted">
+                      Wykonaj zadanie zgodnie z instrukcją w pliku{" "}
+                      <span className="font-mono">QUEST.md</span> i wypchnij kod do
+                      tego repozytorium. Mechanizm zgłaszania i automatycznej oceny
+                      dodamy w kolejnym etapie — na razie repo jest Twoją kartą
+                      pracy.
+                    </p>
                   </div>
                 </div>
 
-                {/* Stopka karty: licznik + zgłoszenie */}
                 <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-gh-border bg-gh-surface2 px-4 py-4">
                   <div className="text-sm text-gh-muted">
                     <div>
-                      Quest resetuje się za <Countdown />
+                      Następny quest za <Countdown />
                       <span className="ml-1 text-gh-subtle">(północ CET)</span>
                     </div>
                     <div className="mt-1 text-xs text-gh-subtle">
-                      Repozytorium musi być publiczne.
+                      Repozytorium musi pozostać publiczne.
                     </div>
                   </div>
                   <button
                     type="button"
-                    className="rounded-md bg-gh-green px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
+                    disabled
+                    className="cursor-default rounded-md border border-gh-border bg-gh-surface px-4 py-2 text-sm font-semibold text-gh-muted"
                   >
-                    Zgłoś do oceny
+                    Wygenerowano dziś
                   </button>
                 </footer>
               </article>
+            ) : (
+              // STAN: bezczynny — duży przycisk na środku
+              <div className="flex min-h-[420px] flex-col items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={authStatus === "loading"}
+                  className="rounded-md bg-gh-green px-6 py-4 text-base font-semibold text-white transition hover:brightness-110 disabled:cursor-default disabled:opacity-60"
+                >
+                  {isAuthed
+                    ? "Wygeneruj dzisiejszy quest"
+                    : "Zaloguj się przez GitHub, aby wygenerować quest"}
+                </button>
+                {!isAuthed && authStatus !== "loading" && (
+                  <p className="text-xs text-gh-subtle">
+                    Quest tworzy publiczne repo na Twoim koncie GitHub.
+                  </p>
+                )}
+              </div>
             )}
           </section>
 
