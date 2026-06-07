@@ -3,8 +3,10 @@ import {
   getViewerLogin,
   getUserStats,
   getUserQuests,
+  getUserCompletions,
 } from "@/lib/profile-data";
 import { relativeQuestDate } from "@/lib/date";
+import { buildQuestCalendar } from "@/lib/calendar";
 
 function RepoIcon() {
   return (
@@ -42,10 +44,14 @@ function statusBadge(status: "PENDING" | "PASSED" | "FAILED") {
 
 export default async function ProfileOverviewPage() {
   const login = await getViewerLogin();
-  const [stats, quests] = await Promise.all([
+  const [stats, quests, completions] = await Promise.all([
     getUserStats(login),
     getUserQuests(login),
+    getUserCompletions(login),
   ]);
+
+  // Siatka kalendarza (Pon–Nd, ostatni rok) z ukończeń. Brak → pusta siatka, 0.
+  const { days, completedCount } = buildQuestCalendar(completions);
 
   // Brak wiersza statystyk → zera (świeże konto bez ukończeń).
   const s = stats ?? {
@@ -119,7 +125,7 @@ export default async function ProfileOverviewPage() {
           Kalendarz ukończonych questów
         </h2>
         <div className="rounded-md border border-gh-border bg-gh-surface p-4">
-          <QuestCalendar />
+          <QuestCalendar days={days} completedCount={completedCount} />
         </div>
       </section>
     </div>

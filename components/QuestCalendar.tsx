@@ -2,14 +2,11 @@
 
 import { useMemo, useState } from "react";
 import {
-  questCalendar,
-  questsCompletedLastYear,
   QUEST_DONE_COLOR,
   QUEST_EMPTY_COLOR,
-  formatPlDate,
-  shortMonth,
   type QuestDay,
-} from "@/lib/mock-data";
+} from "@/lib/calendar";
+import { formatPlDate, shortMonth } from "@/lib/date";
 
 const CELL = 11; // px
 const GAP = 3; // px
@@ -25,17 +22,23 @@ interface HoverState {
   y: number;
 }
 
-export default function QuestCalendar() {
+export default function QuestCalendar({
+  days,
+  completedCount,
+}: {
+  days: QuestDay[];
+  completedCount: number;
+}) {
   const [hover, setHover] = useState<HoverState | null>(null);
 
   // Dane startują od poniedziałku → dzielimy sekwencyjnie na tygodnie (kolumny).
   const weeks = useMemo(() => {
     const chunks: QuestDay[][] = [];
-    for (let i = 0; i < questCalendar.length; i += 7) {
-      chunks.push(questCalendar.slice(i, i + 7));
+    for (let i = 0; i < days.length; i += 7) {
+      chunks.push(days.slice(i, i + 7));
     }
     return chunks;
-  }, []);
+  }, [days]);
 
   // Etykiety miesięcy nad kolumnami — przy zmianie miesiąca, bez tłoku.
   const monthLabels = useMemo(() => {
@@ -59,7 +62,7 @@ export default function QuestCalendar() {
   return (
     <div>
       <div className="mb-4 text-sm text-gh-muted">
-        {questsCompletedLastYear} ukończonych questów w ostatnim roku
+        {completedCount} ukończonych questów w ostatnim roku
       </div>
 
       <div className="overflow-x-auto pb-1">

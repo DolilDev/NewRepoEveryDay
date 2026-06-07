@@ -35,6 +35,35 @@ const PL_MONTHS_GENITIVE = [
   "lipca", "sierpnia", "września", "października", "listopada", "grudnia",
 ];
 
+const PL_MONTHS_SHORT = [
+  "sty", "lut", "mar", "kwi", "maj", "cze",
+  "lip", "sie", "wrz", "paź", "lis", "gru",
+];
+
+const PL_MONTHS_NOMINATIVE = [
+  "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec",
+  "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień",
+];
+
+// Data z ISO (YYYY-MM-DD) po polsku, np. "4 czerwca 2026" (dopełniacz miesiąca).
+export function formatPlDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${d} ${PL_MONTHS_GENITIVE[m - 1]} ${y}`;
+}
+
+// Skrót miesiąca (0–11), np. 5 → "cze" — etykiety nad kolumnami kalendarza.
+export function shortMonth(monthIndex: number): string {
+  return PL_MONTHS_SHORT[monthIndex];
+}
+
+// Miesiąc + rok po polsku, np. "marzec 2021" (data dołączenia z GitHuba).
+// Przyjmuje pełny ISO 8601; liczone w UTC, by nie przesunąć dnia na granicy miesiąca.
+export function formatPlMonthYear(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${PL_MONTHS_NOMINATIVE[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
 // Względny opis daty questa po polsku ("Dzisiaj", "Wczoraj", "3 dni temu",
 // "tydzień temu", "2 tygodnie temu"), a dla starszych — pełna data.
 // `day` to kanoniczny dzień CET (północ UTC), porównywany z dzisiejszym dniem CET.
