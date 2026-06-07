@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { questRepos } from "@/lib/mock-data";
 
 function BookIcon() {
   return (
@@ -20,18 +19,19 @@ function ListIcon() {
   );
 }
 
-const TABS = [
-  { href: "/profile", label: "Overview", icon: BookIcon, count: null as number | null },
-  {
-    href: "/profile/repositories",
-    label: "Repositories",
-    icon: ListIcon,
-    count: questRepos.length,
-  },
-];
-
-export default function ProfileTabs() {
+// repoCount = liczba questów gracza z bazy (licznik przy „Repositories").
+export default function ProfileTabs({ repoCount }: { repoCount: number }) {
   const pathname = usePathname();
+
+  const TABS = [
+    { href: "/profile", label: "Overview", icon: BookIcon, count: null as number | null },
+    {
+      href: "/profile/repositories",
+      label: "Repositories",
+      icon: ListIcon,
+      count: repoCount,
+    },
+  ];
 
   return (
     <nav className="-mb-px flex h-12 items-end gap-4 overflow-x-auto">

@@ -1,14 +1,19 @@
 import ProfileSidebar from "@/components/ProfileSidebar";
 import ProfileTabs from "@/components/ProfileTabs";
+import { getViewerLogin, getUserQuestCount } from "@/lib/profile-data";
 
 // Wspólny szkielet profilu: pełnej szerokości „drugi pasek" (48px) z zakładkami
 // tuż pod navbarem, a niżej kontener 1280px ze stałym sidebarem (296px) + treść.
 // Zmienia się tylko prawa kolumna ({children}) — Overview albo Repositories.
-export default function ProfileLayout({
+export default async function ProfileLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Licznik przy zakładce „Repositories" = liczba questów gracza z bazy.
+  const login = await getViewerLogin();
+  const repoCount = await getUserQuestCount(login);
+
   return (
     <div className="flex-1 bg-gh-panel">
       {/* Drugi pasek nawigacji — ciągnie się przez całą szerokość strony.
@@ -16,7 +21,7 @@ export default function ProfileLayout({
           Tło #010409 jak górny navbar (treść profilu niżej zostaje #0C1015). */}
       <div className="border-b border-gh-border bg-gh-bg-deep">
         <div className="px-4">
-          <ProfileTabs />
+          <ProfileTabs repoCount={repoCount} />
         </div>
       </div>
 
