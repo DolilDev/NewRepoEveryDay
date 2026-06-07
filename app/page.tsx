@@ -43,7 +43,20 @@ type QuestResult = {
   repoUrl: string;
   questFileUrl: string;
   fileUploaded: boolean;
+  status?: "PENDING" | "PASSED" | "FAILED"; // brak = świeżo wygenerowany (PENDING)
 };
+
+// Odpowiedź oceny po zaliczeniu — do komunikatu sukcesu.
+type SubmitResult = {
+  descriptionOfWork: string;
+  pointsAwarded: number;
+  points: number;
+  currentStreak: number;
+  longestStreak: number;
+};
+
+// Stan zgłoszenia questa do oceny (niezależny od fazy generowania).
+type SubmitPhase = "idle" | "checking" | "passed" | "rejected" | "error";
 
 // Pozycja panelu "Ostatnie questy" — prawdziwy quest z bazy.
 type RecentQuest = {
@@ -73,6 +86,15 @@ export default function DashboardPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [projectQuery, setProjectQuery] = useState("");
   const [recentQuests, setRecentQuests] = useState<RecentQuest[]>([]);
+
+  // Zgłaszanie do oceny (osobny tor od generowania).
+  const [submitPhase, setSubmitPhase] = useState<SubmitPhase>("idle");
+  const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null);
+  const [submitMissing, setSubmitMissing] = useState<string[]>([]);
+  const [submitError, setSubmitError] = useState("");
+
+  // Quest uznany za ukończony: świeżo zaliczony w tej sesji albo PASSED z bazy.
+  const completed = submitPhase === "passed" || result?.status === "PASSED";
 
   // Po odświeżeniu strony przywracamy dzisiejszy wynik z localStorage — to tylko
   // szybki HINT (działa offline / przed odpowiedzią API). Źródłem prawdy jest baza
@@ -165,6 +187,35 @@ export default function DashboardPage() {
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Nieznany błąd.");
       setPhase("error");
+    }
+  }
+
+  // Zgłoszenie dzisiejszego questa do oceny (GitHub + OpenAI — chwilę trwa).
+  async function handleSubmit() {
+    if (submitPhase === "checking") return;
+    setSubmitPhase("checking");
+    setSubmitError("");
+    setSubmitMissing([]);
+    try {
+      const res = await fetch("/api/quest/submit", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || `Błąd serwera (${res.status}).`);
+      }
+      if (data.passed) {
+        // alreadyCompleted: quest był już zaliczony wcześniej (brak nowych punktów).
+        if (!data.alreadyCompleted) {
+          setSubmitResult(data as SubmitResult);
+        }
+        setSubmitPhase("passed");
+        loadQuests(); // odśwież status questa z bazy (PASSED)
+      } else {
+        setSubmitMissing(Array.isArray(data.missing) ? data.missing : []);
+        setSubmitPhase("rejected");
+      }
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : "Nieznany błąd.");
+      setSubmitPhase("error");
     }
   }
 
@@ -268,7 +319,7 @@ export default function DashboardPage() {
                     Dzisiejszy quest
                   </span>
                   <span className="rounded-full border border-gh-green/40 bg-gh-green/10 px-2 py-1 text-xs font-semibold text-gh-green">
-                    Repo utworzone
+                    {completed ? "Zaliczony 100/100" : "Repo utworzone"}
                   </span>
                 </header>
 
@@ -324,19 +375,82 @@ export default function DashboardPage() {
                     </p>
                   )}
 
-                  {/* Jak oddać zadanie (na razie tekstowo) */}
-                  <div className="rounded-md border border-gh-border bg-gh-bg px-4 py-4 text-sm">
-                    <div className="mb-1 font-semibold text-gh-text">
-                      Jak oddać zadanie do sprawdzenia
+                  {/* Oddanie questa do automatycznej oceny */}
+                  {completed ? (
+                    // STAN: quest zaliczony
+                    <div className="rounded-md border border-gh-green/40 bg-gh-green/10 px-4 py-4 text-sm">
+                      <div className="mb-1 font-semibold text-gh-green">
+                        Quest zaliczony! 🎉
+                      </div>
+                      {submitResult ? (
+                        <p className="text-gh-text">
+                          {submitResult.descriptionOfWork
+                            ? `${submitResult.descriptionOfWork} `
+                            : ""}
+                          <span className="text-gh-muted">
+                            +{submitResult.pointsAwarded} pkt · streak:{" "}
+                            {submitResult.currentStreak}
+                          </span>
+                        </p>
+                      ) : (
+                        <p className="text-gh-muted">
+                          Ten quest został już zaliczony.
+                        </p>
+                      )}
                     </div>
-                    <p className="text-gh-muted">
-                      Wykonaj zadanie zgodnie z instrukcją w pliku{" "}
-                      <span className="font-mono">QUEST.md</span> i wypchnij kod do
-                      tego repozytorium. Mechanizm zgłaszania i automatycznej oceny
-                      dodamy w kolejnym etapie — na razie repo jest Twoją kartą
-                      pracy.
-                    </p>
-                  </div>
+                  ) : (
+                    // STAN: do oddania
+                    <div className="rounded-md border border-gh-border bg-gh-bg px-4 py-4 text-sm">
+                      <div className="mb-1 font-semibold text-gh-text">
+                        Oddaj zadanie do sprawdzenia
+                      </div>
+                      <p className="mb-3 text-gh-muted">
+                        Wykonaj zadanie zgodnie z plikiem{" "}
+                        <span className="font-mono">QUEST.md</span>, wypchnij kod do
+                        repozytorium i zgłoś do automatycznej oceny (sprawdzamy, czy
+                        spełnione są wszystkie kryteria).
+                      </p>
+
+                      {submitPhase === "rejected" && (
+                        <div className="mb-3 rounded-md border border-gh-red/40 bg-gh-red/10 px-3 py-3">
+                          <div className="mb-1 font-semibold text-gh-red">
+                            Jeszcze nie zaliczone
+                          </div>
+                          {submitMissing.length > 0 ? (
+                            <ul className="list-disc space-y-1 pl-5 text-gh-text">
+                              {submitMissing.map((m, i) => (
+                                <li key={i}>{m}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-gh-text">
+                              Nie wszystkie kryteria są spełnione.
+                            </p>
+                          )}
+                          <p className="mt-2 text-xs text-gh-muted">
+                            Popraw repozytorium i zgłoś ponownie.
+                          </p>
+                        </div>
+                      )}
+
+                      {submitPhase === "error" && (
+                        <p className="mb-3 text-xs text-gh-red">{submitError}</p>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={submitPhase === "checking"}
+                        className="inline-flex items-center gap-2 rounded-md bg-gh-green px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-default disabled:opacity-60"
+                      >
+                        {submitPhase === "checking"
+                          ? "Sprawdzam repozytorium…"
+                          : submitPhase === "rejected"
+                            ? "Zgłoś ponownie"
+                            : "Zgłoś do oceny"}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-gh-border bg-gh-surface2 px-4 py-4">

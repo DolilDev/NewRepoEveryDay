@@ -33,6 +33,7 @@ export async function GET(req: Request) {
           repoUrl: top.repoUrl ?? "",
           questFileUrl: top.questMdUrl ?? "",
           fileUploaded: Boolean(top.questMdUrl),
+          status: top.status, // PENDING / PASSED — decyduje, czy quest jest ukończony
         }
       : null;
 
