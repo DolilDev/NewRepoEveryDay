@@ -1,12 +1,9 @@
 // Lewa kolumna profilu — stała przy obu zakładkach (Overview / Repositories).
 import Avatar from "./Avatar";
 import { auth } from "@/auth";
-import {
-  achievements,
-  currentUser,
-  formatPlDate,
-  formatPlMonthYear,
-} from "@/lib/mock-data";
+import { getUserAchievements } from "@/lib/profile-data";
+import { achievementMeta } from "@/lib/achievements";
+import { formatPlDate, formatPlMonthYear } from "@/lib/date";
 
 function PeopleIcon() {
   return (
@@ -25,69 +22,74 @@ function CalendarIcon() {
 }
 
 export default async function ProfileSidebar() {
-  // GitHub pokazuje wyłącznie zdobyte osiągnięcia — bez wyszarzonych „zablokowanych".
-  const unlocked = achievements.filter((a) => a.unlocked);
-
-  // Prawdziwe dane konta z sesji (avatar/nazwa/login) + profil z GitHub API.
-  // Gdy brak sesji — fallback na mocki. Streak/ranking/osiągnięcia zostają mockowe.
+  // Dane konta z sesji (avatar/nazwa/login) + profil z GitHub API (bio/liczniki).
   const session = await auth();
   const user = session?.user;
   const gh = user?.github;
+  const login = user?.login ?? null;
 
-  const name = user?.name ?? currentUser.name;
-  const login = user?.login ?? currentUser.login;
+  // Zdobyte osiągnięcia z bazy (tylko te, które user faktycznie ma).
+  const dbAchievements = await getUserAchievements(login);
+  const unlocked = dbAchievements.map((a) => ({
+    id: a.id,
+    unlockedDate: a.unlockedAt.toISOString().slice(0, 10),
+    ...achievementMeta(a.type),
+  }));
+
+  const name = user?.name ?? user?.login ?? "Twój profil";
   const image = user?.image ?? undefined;
-  const profileUrl = user?.login
-    ? `https://github.com/${user.login}`
-    : currentUser.profileUrl;
+  const profileUrl = login ? `https://github.com/${login}` : "#";
 
-  // Bio z GitHuba (może być puste → stan pusty); bez sesji pokazujemy mock.
-  const bio = gh ? gh.bio : currentUser.bio;
-  // Liczniki: realne z GitHuba albo mockowe. Realne formatujemy po polsku.
-  const followers = gh
-    ? gh.followers.toLocaleString("pl-PL")
-    : currentUser.followers;
-  const following = gh
-    ? gh.following.toLocaleString("pl-PL")
-    : currentUser.following;
-  // Data dołączenia: do GitHuba (jeśli zalogowany) albo do DailyQuest (mock).
+  // Bio z GitHuba (może być puste → po prostu nie renderujemy elementu).
+  const bio = gh?.bio ?? null;
+  // Liczniki społeczności z GitHuba — pokazujemy tylko, gdy mamy realne dane.
+  const followers = gh ? gh.followers.toLocaleString("pl-PL") : null;
+  const following = gh ? gh.following.toLocaleString("pl-PL") : null;
+  // Data dołączenia do GitHuba — tylko gdy znamy ją z profilu.
   const joinedLabel =
     gh?.createdAt && formatPlMonthYear(gh.createdAt)
       ? `Dołączył(a) ${formatPlMonthYear(gh.createdAt)}`
-      : `Dołączył do DailyQuest ${formatPlDate(currentUser.joinedDate)}`;
+      : null;
 
   return (
     <aside className="w-full shrink-0 md:w-[296px]">
       <div className="flex flex-col items-center text-center md:items-start md:text-left">
-        <Avatar name={name} login={login} image={image} size={260} />
+        <Avatar name={name} login={login ?? ""} image={image} size={260} />
 
         <h1 className="mt-4 text-2xl font-bold leading-tight text-gh-text">
           {name}
         </h1>
-        <a
-          href={profileUrl}
-          className="text-xl font-light text-gh-muted hover:text-gh-blue hover:underline"
-        >
-          {login}
-        </a>
+        {login && (
+          <a
+            href={profileUrl}
+            className="text-xl font-light text-gh-muted hover:text-gh-blue hover:underline"
+          >
+            {login}
+          </a>
+        )}
 
         {/* Bio renderujemy tylko, gdy faktycznie istnieje — brak opisu = brak elementu. */}
         {bio && <p className="mt-4 text-sm text-gh-text">{bio}</p>}
 
-        <div className="mt-4 flex items-center gap-2 text-sm text-gh-muted">
-          <PeopleIcon />
-          <span>
-            <span className="font-semibold text-gh-text">{followers}</span>{" "}
-            followers ·{" "}
-            <span className="font-semibold text-gh-text">{following}</span>{" "}
-            following
-          </span>
-        </div>
+        {/* Liczniki społeczności tylko, gdy mamy realne dane z GitHuba. */}
+        {followers && following && (
+          <div className="mt-4 flex items-center gap-2 text-sm text-gh-muted">
+            <PeopleIcon />
+            <span>
+              <span className="font-semibold text-gh-text">{followers}</span>{" "}
+              followers ·{" "}
+              <span className="font-semibold text-gh-text">{following}</span>{" "}
+              following
+            </span>
+          </div>
+        )}
 
-        <div className="mt-2 flex items-center gap-2 text-sm text-gh-muted">
-          <CalendarIcon />
-          <span>{joinedLabel}</span>
-        </div>
+        {joinedLabel && (
+          <div className="mt-2 flex items-center gap-2 text-sm text-gh-muted">
+            <CalendarIcon />
+            <span>{joinedLabel}</span>
+          </div>
+        )}
       </div>
 
       {/* Osiągnięcia — pokazujemy WYŁĄCZNIE zdobyte; brak → sekcja znika. */}
