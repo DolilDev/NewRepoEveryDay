@@ -10,6 +10,9 @@ import {
   putQuestFile,
 } from "@/lib/github";
 import { generateQuest, generateRepoName, buildQuestMarkdown } from "@/lib/openai";
+import { prisma } from "@/lib/prisma";
+import { upsertUser } from "@/lib/user";
+import { cetDayStart } from "@/lib/date";
 
 export const runtime = "nodejs";
 
@@ -76,13 +79,33 @@ export async function POST(req: Request) {
       created.name,
       markdown,
     );
+    const questFileUrl = `${created.htmlUrl}/blob/${created.defaultBranch}/QUEST.md`;
+
+    // 4) Zapis do bazy — DOPIERO TU, po udanym utworzeniu repo i QUEST.md.
+    // Najpierw upewniamy się, że user istnieje, potem wiążemy z nim quest.
+    const user = await upsertUser(authData);
+    await prisma.quest.create({
+      data: {
+        userId: user.id,
+        date: cetDayStart(), // kanoniczny dzień CET (klucz limitu 1/dzień)
+        title: quest.title,
+        repoName: created.name,
+        why: quest.why,
+        instructions: quest.instructions,
+        openPart: quest.openPart,
+        criteria: quest.criteria, // lista kryteriów jako JSON
+        status: "PENDING",
+        repoUrl: created.htmlUrl,
+        questMdUrl: fileUploaded ? questFileUrl : null,
+      },
+    });
 
     // Do przeglądarki wracają WYŁĄCZNIE publiczne informacje o repo.
     return NextResponse.json({
       title: quest.title,
       repoName: created.name,
       repoUrl: created.htmlUrl,
-      questFileUrl: `${created.htmlUrl}/blob/${created.defaultBranch}/QUEST.md`,
+      questFileUrl,
       fileUploaded,
     });
   } catch (e) {
