@@ -29,6 +29,24 @@ export async function POST(req: Request) {
   const { accessToken, login } = authData;
 
   try {
+    // 0) Twardy limit 1/dzień (wg CET). Baza jest źródłem prawdy: jeśli dzisiejszy
+    // quest już istnieje, NIE wołamy OpenAI i NIE tworzymy repo — zwracamy istniejący.
+    if (login) {
+      const existing = await prisma.quest.findFirst({
+        where: { user: { githubLogin: login }, date: cetDayStart() },
+      });
+      if (existing) {
+        return NextResponse.json({
+          alreadyGenerated: true,
+          title: existing.title,
+          repoName: existing.repoName,
+          repoUrl: existing.repoUrl ?? "",
+          questFileUrl: existing.questMdUrl ?? "",
+          fileUploaded: Boolean(existing.questMdUrl),
+        });
+      }
+    }
+
     // 1) Profil użytkownika → quest z OpenAI.
     const repos = await fetchUserRepos(accessToken);
     const summary = buildProfileSummary(repos);
