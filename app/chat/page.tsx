@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import Avatar from "@/components/Avatar";
-import {
-  chatMessages,
-  currentUser,
-  type ChatMessage,
-} from "@/lib/mock-data";
+import { chatMessages, type ChatMessage } from "@/lib/mock-data";
 
 export default function ChatPage() {
+  const { data: session } = useSession();
+  const me = session?.user;
+  // Tożsamość nadawcy z sesji (czat nie jest jeszcze trzymany w bazie).
+  const myName = me?.name ?? me?.login ?? "Gość";
+  const myLogin = me?.login ?? "gosc";
+
   const [messages, setMessages] = useState<ChatMessage[]>(chatMessages);
   const [text, setText] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
@@ -33,8 +36,8 @@ export default function ChatPage() {
       ...prev,
       {
         id: `local-${Date.now()}`,
-        authorName: currentUser.name,
-        authorLogin: currentUser.login,
+        authorName: myName,
+        authorLogin: myLogin,
         content,
         time,
       },
@@ -58,7 +61,7 @@ export default function ChatPage() {
         {/* Lista wiadomości */}
         <div ref={listRef} className="flex-1 space-y-4 overflow-y-auto p-5">
           {messages.map((m) => {
-            const isMe = m.authorLogin === currentUser.login;
+            const isMe = m.authorLogin === myLogin;
             return (
               <div key={m.id} className="flex items-start gap-3">
                 <Avatar name={m.authorName} login={m.authorLogin} size={32} />
