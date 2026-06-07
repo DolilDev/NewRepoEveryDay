@@ -6,6 +6,10 @@ import { getToken } from "next-auth/jwt";
 export type ServerAuth = {
   accessToken: string;
   login: string | null;
+  // Publiczne dane profilu z zaszyfrowanego JWT — do upsertu wiersza w users.
+  name: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
 };
 
 export async function getServerAuth(req: Request): Promise<ServerAuth | null> {
@@ -23,5 +27,15 @@ export async function getServerAuth(req: Request): Promise<ServerAuth | null> {
   if (typeof accessToken !== "string" || !accessToken) return null;
 
   const login = typeof token?.login === "string" ? token.login : null;
-  return { accessToken, login };
+  // name/picture to standardowe pola JWT (NextAuth zapisuje je z profilu GitHub),
+  // bio dociągnięte do token.github przy logowaniu. profileUrl wyliczamy z loginu.
+  const name =
+    typeof token?.name === "string" && token.name.trim() ? token.name : null;
+  const avatarUrl =
+    typeof token?.picture === "string" && token.picture ? token.picture : null;
+  const bio =
+    typeof token?.github?.bio === "string" && token.github.bio.trim()
+      ? token.github.bio
+      : null;
+  return { accessToken, login, name, avatarUrl, bio };
 }
