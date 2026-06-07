@@ -169,3 +169,89 @@ export async function putQuestFile(
   );
   return res.ok;
 }
+
+// --- Pobieranie zawartości repo do oceny (Etap B) --------------------------
+
+export type RepoMeta = { defaultBranch: string; isPrivate: boolean };
+
+// Metadane repo: gałąź domyślna (do pobrania drzewa) i widoczność (kryterium
+// „repozytorium publiczne"). Zwraca null przy błędzie.
+export async function fetchRepoMeta(
+  accessToken: string,
+  owner: string,
+  repo: string,
+): Promise<RepoMeta | null> {
+  try {
+    const res = await fetch(`${GH_API}/repos/${owner}/${repo}`, {
+      headers: ghHeaders(accessToken),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const d = await res.json();
+    return {
+      defaultBranch:
+        typeof d?.default_branch === "string" ? d.default_branch : "main",
+      isPrivate: Boolean(d?.private),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export type RepoTreeEntry = { path: string; size: number; sha: string };
+
+// Pełne drzewo plików repo (rekurencyjnie). Zwraca tylko bloby (pliki), nie
+// katalogi. Zwraca null przy błędzie.
+export async function fetchRepoTree(
+  accessToken: string,
+  owner: string,
+  repo: string,
+  branch: string,
+): Promise<RepoTreeEntry[] | null> {
+  try {
+    const res = await fetch(
+      `${GH_API}/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+      { headers: ghHeaders(accessToken), cache: "no-store" },
+    );
+    if (!res.ok) return null;
+    const d = await res.json();
+    if (!Array.isArray(d?.tree)) return null;
+    const entries = d.tree as Array<{
+      path?: unknown;
+      type?: unknown;
+      size?: unknown;
+      sha?: unknown;
+    }>;
+    return entries
+      .filter((e) => e?.type === "blob" && typeof e?.path === "string")
+      .map((e) => ({
+        path: e.path as string,
+        size: typeof e.size === "number" ? e.size : 0,
+        sha: typeof e.sha === "string" ? e.sha : "",
+      }));
+  } catch {
+    return null;
+  }
+}
+
+// Tekstowa treść bloba po SHA. Zwraca null przy błędzie lub braku kodowania
+// base64 (np. blob binarny). Buffer.from ignoruje znaki nowej linii w base64.
+export async function fetchBlobText(
+  accessToken: string,
+  owner: string,
+  repo: string,
+  sha: string,
+): Promise<string | null> {
+  try {
+    const res = await fetch(`${GH_API}/repos/${owner}/${repo}/git/blobs/${sha}`, {
+      headers: ghHeaders(accessToken),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const d = await res.json();
+    if (typeof d?.content !== "string" || d?.encoding !== "base64") return null;
+    return Buffer.from(d.content, "base64").toString("utf-8");
+  } catch {
+    return null;
+  }
+}
