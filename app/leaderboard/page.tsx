@@ -1,23 +1,53 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Avatar from "@/components/Avatar";
-import { currentUser, leaderboard } from "@/lib/mock-data";
+
+// Gracz w rankingu — kształt zgodny z odpowiedzią /api/leaderboard.
+type Player = {
+  id: string;
+  name: string;
+  login: string;
+  avatarUrl: string | null;
+  profileUrl: string;
+  currentStreak: number;
+  longestStreak: number;
+  totalQuests: number;
+  points: number;
+};
 
 export default function LeaderboardPage() {
   const [query, setQuery] = useState("");
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [meLogin, setMeLogin] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Sortowanie po streaku malejąco, rozstrzygnięcie po liczbie questów.
-  // Ranga liczona z pełnej tabeli, żeby filtrowanie nie zmieniało numerów.
+  // Ranking liczymy serwerowo — tu tylko pobieramy gotową, posortowaną listę.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/leaderboard");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!active) return;
+        setPlayers(Array.isArray(data.players) ? data.players : []);
+        setMeLogin(typeof data.meLogin === "string" ? data.meLogin : null);
+      } catch {
+        // sieć/serwer niedostępny — zostaje pusty ranking
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Ranga z pełnej listy (kolejność z serwera), żeby filtr nie zmieniał numerów.
   const ranked = useMemo(
-    () =>
-      [...leaderboard]
-        .sort(
-          (a, b) =>
-            b.currentStreak - a.currentStreak || b.totalQuests - a.totalQuests,
-        )
-        .map((player, i) => ({ player, rank: i + 1 })),
-    [],
+    () => players.map((player, i) => ({ player, rank: i + 1 })),
+    [players],
   );
 
   const q = query.trim().toLowerCase();
@@ -61,55 +91,86 @@ export default function LeaderboardPage() {
             </tr>
           </thead>
           <tbody>
-            {visible.map(({ player, rank }) => {
-              const isMe = player.id === currentUser.id;
-              const medal = ["🥇", "🥈", "🥉"][rank - 1];
-              return (
-                <tr
-                  key={player.id}
-                  className={`border-t border-gh-border ${
-                    isMe ? "bg-gh-surface2" : "bg-gh-surface hover:bg-gh-surface2"
-                  }`}
+            {loading ? (
+              // Stan ładowania — odróżniony od pustego rankingu.
+              <tr className="border-t border-gh-border bg-gh-surface">
+                <td
+                  colSpan={5}
+                  className="px-4 py-8 text-center text-sm text-gh-muted"
                 >
-                  <td className="px-4 py-2 text-center font-mono text-gh-muted">
-                    {medal ?? rank}
-                  </td>
-                  <td className="px-4 py-2">
-                    <div className="flex items-center gap-4">
-                      <Avatar name={player.name} login={player.login} size={28} />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate font-semibold text-gh-text">
-                            {player.name}
-                          </span>
-                          {isMe && (
-                            <span className="rounded-full border border-gh-green/40 bg-gh-green/10 px-2 text-xs font-semibold uppercase text-gh-green">
-                              Ty
+                  Ładowanie rankingu…
+                </td>
+              </tr>
+            ) : players.length === 0 ? (
+              // Stan pusty — nikt jeszcze nie gra (nie błąd).
+              <tr className="border-t border-gh-border bg-gh-surface">
+                <td
+                  colSpan={5}
+                  className="px-4 py-8 text-center text-sm text-gh-muted"
+                >
+                  Nikt jeszcze nie zaczął grać — bądź pierwszy!
+                </td>
+              </tr>
+            ) : (
+              visible.map(({ player, rank }) => {
+                const isMe = meLogin != null && player.login === meLogin;
+                const medal = ["🥇", "🥈", "🥉"][rank - 1];
+                return (
+                  <tr
+                    key={player.id}
+                    className={`border-t border-gh-border ${
+                      isMe
+                        ? "bg-gh-surface2"
+                        : "bg-gh-surface hover:bg-gh-surface2"
+                    }`}
+                  >
+                    <td className="px-4 py-2 text-center font-mono text-gh-muted">
+                      {medal ?? rank}
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-4">
+                        <Avatar
+                          name={player.name}
+                          login={player.login}
+                          image={player.avatarUrl}
+                          size={28}
+                        />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="truncate font-semibold text-gh-text">
+                              {player.name}
                             </span>
-                          )}
+                            {isMe && (
+                              <span className="rounded-full border border-gh-green/40 bg-gh-green/10 px-2 text-xs font-semibold uppercase text-gh-green">
+                                Ty
+                              </span>
+                            )}
+                          </div>
+                          <a
+                            href={player.profileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="truncate text-xs text-gh-muted hover:text-gh-blue hover:underline"
+                          >
+                            @{player.login}
+                          </a>
                         </div>
-                        <a
-                          href={player.profileUrl}
-                          className="truncate text-xs text-gh-muted hover:text-gh-blue hover:underline"
-                        >
-                          @{player.login}
-                        </a>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-2 text-right font-semibold text-gh-text">
-                    🔥 {player.currentStreak}
-                  </td>
-                  <td className="hidden px-4 py-2 text-right text-gh-muted sm:table-cell">
-                    {player.totalQuests}
-                  </td>
-                  <td className="px-4 py-2 text-right font-semibold text-gh-text">
-                    {player.points.toLocaleString("pl-PL")}
-                  </td>
-                </tr>
-              );
-            })}
-            {visible.length === 0 && (
+                    </td>
+                    <td className="px-4 py-2 text-right font-semibold text-gh-text">
+                      🔥 {player.currentStreak}
+                    </td>
+                    <td className="hidden px-4 py-2 text-right text-gh-muted sm:table-cell">
+                      {player.totalQuests}
+                    </td>
+                    <td className="px-4 py-2 text-right font-semibold text-gh-text">
+                      {player.points.toLocaleString("pl-PL")}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+            {!loading && players.length > 0 && visible.length === 0 && (
               <tr className="border-t border-gh-border bg-gh-surface">
                 <td
                   colSpan={5}
