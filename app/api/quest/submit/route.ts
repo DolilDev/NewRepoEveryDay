@@ -132,6 +132,19 @@ export async function POST(req: Request) {
         },
       });
 
+      // 4) Osiągnięcia. Para (userId, type) jest unikalna — createMany ze
+      // skipDuplicates przyznaje tylko brakujące i nie duplikuje (wiersze trwałe).
+      const earned = ["first_quest"]; // każde zaliczenie = pierwszy quest spełniony
+      if (currentStreak >= 7) earned.push("streak_7");
+      if (currentStreak >= 30) earned.push("streak_30");
+      if (currentStreak >= 100) earned.push("streak_100");
+      if (totalQuests >= 10) earned.push("quests_10");
+      if (totalQuests >= 50) earned.push("quests_50");
+      await tx.achievement.createMany({
+        data: earned.map((type) => ({ userId: quest.userId, type })),
+        skipDuplicates: true,
+      });
+
       return { currentStreak, longestStreak, totalQuests, points, pointsAwarded };
     });
 
