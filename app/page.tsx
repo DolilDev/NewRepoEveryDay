@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import Countdown from "@/components/Countdown";
-import { questProjects } from "@/lib/mock-data";
 
 function RepoIcon() {
   return (
@@ -67,6 +66,22 @@ type RecentQuest = {
   relativeDate: string;
 };
 
+// Repozytorium questowe do lewego panelu "Twoje ostatnie projekty" (z tabeli quests).
+type Project = {
+  id: string;
+  name: string;
+  title: string;
+  repoUrl: string;
+};
+
+// Statystyki gracza — na razie do licznika streaka w nagłówku dashboardu.
+type Stats = {
+  currentStreak: number;
+  longestStreak: number;
+  totalQuests: number;
+  points: number;
+};
+
 type Phase = "idle" | "loading" | "success" | "error";
 
 const STORAGE_KEY = "dq:lastQuest";
@@ -75,6 +90,11 @@ const STORAGE_KEY = "dq:lastQuest";
 function todayKey(): string {
   const d = new Date();
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+// Polska odmiana słowa „dzień" przy liczbie: 1 dzień, 0/2/5/22… dni.
+function dniLabel(n: number): string {
+  return n === 1 ? "dzień" : "dni";
 }
 
 export default function DashboardPage() {
@@ -86,6 +106,12 @@ export default function DashboardPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [projectQuery, setProjectQuery] = useState("");
   const [recentQuests, setRecentQuests] = useState<RecentQuest[]>([]);
+
+  // Dane gracza z bazy (statystyki + projekty questowe). meLoaded rozróżnia
+  // „jeszcze ładuję" od „pusto" — pusty panel ma wyglądać jak start, nie błąd.
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [meLoaded, setMeLoaded] = useState(false);
 
   // Zgłaszanie do oceny (osobny tor od generowania).
   const [submitPhase, setSubmitPhase] = useState<SubmitPhase>("idle");
@@ -143,17 +169,33 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Po zalogowaniu (i przy starcie, jeśli już zalogowany) czytamy questy z bazy.
+  // Statystyki + projekty questowe zalogowanego gracza (lewy panel, licznik streaka).
+  const loadMe = useCallback(async () => {
+    try {
+      const res = await fetch("/api/me");
+      if (!res.ok) return;
+      const data = await res.json();
+      setStats(data.stats ?? null);
+      setProjects(Array.isArray(data.projects) ? data.projects : []);
+    } catch {
+      // sieć/serwer niedostępny — zostaje poprzedni stan
+    } finally {
+      setMeLoaded(true);
+    }
+  }, []);
+
+  // Po zalogowaniu (i przy starcie, jeśli już zalogowany) czytamy dane z bazy.
   useEffect(() => {
     if (!isAuthed) return;
     loadQuests();
-  }, [isAuthed, loadQuests]);
+    loadMe();
+  }, [isAuthed, loadQuests, loadMe]);
 
   const filteredProjects = useMemo(() => {
     const q = projectQuery.trim().toLowerCase();
-    if (!q) return questProjects;
-    return questProjects.filter((p) => p.name.toLowerCase().includes(q));
-  }, [projectQuery]);
+    if (!q) return projects;
+    return projects.filter((p) => p.name.toLowerCase().includes(q));
+  }, [projectQuery, projects]);
 
   async function handleGenerate() {
     if (phase === "loading") return;
@@ -182,8 +224,9 @@ export default function DashboardPage() {
       } catch {
         // brak localStorage — blokada zadziała tylko w obrębie sesji strony
       }
-      // Odśwież panel "Ostatnie questy" o świeżo zapisany quest z bazy.
+      // Odśwież panele "Ostatnie questy" i "Twoje ostatnie projekty" z bazy.
       loadQuests();
+      loadMe();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Nieznany błąd.");
       setPhase("error");
@@ -209,6 +252,7 @@ export default function DashboardPage() {
         }
         setSubmitPhase("passed");
         loadQuests(); // odśwież status questa z bazy (PASSED)
+        loadMe(); // odśwież licznik streaka po zaliczeniu
       } else {
         setSubmitMissing(Array.isArray(data.missing) ? data.missing : []);
         setSubmitPhase("rejected");
@@ -248,15 +292,22 @@ export default function DashboardPage() {
             </div>
           </div>
           <ul className="max-h-[420px] overflow-y-auto lg:max-h-none lg:min-h-0 lg:flex-1">
-            {filteredProjects.length === 0 ? (
+            {isAuthed && !meLoaded ? (
+              // Stan ładowania — odróżniony od pustego (puste ≠ błąd).
+              <li className="py-4 text-sm text-gh-subtle">Ładowanie…</li>
+            ) : filteredProjects.length === 0 ? (
               <li className="py-4 text-sm text-gh-subtle">
-                Brak pasujących projektów.
+                {projectQuery.trim()
+                  ? "Brak pasujących projektów."
+                  : "Brak projektów — wygeneruj pierwszy quest."}
               </li>
             ) : (
               filteredProjects.map((p) => (
                 <li key={p.id}>
                   <a
-                    href="#"
+                    href={p.repoUrl || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="group flex min-w-0 flex-col gap-1 py-2"
                   >
                     {/* font-normal (400): Segoe UI nie ma kroju Medium (500),
@@ -266,14 +317,11 @@ export default function DashboardPage() {
                       <RepoIcon />
                       <span className="truncate group-hover:underline">{p.name}</span>
                     </span>
-                    <span className="flex items-center gap-2 text-xs text-gh-muted">
-                      <span
-                        className="inline-block h-2 w-2 rounded-full"
-                        style={{ backgroundColor: p.languageColor }}
-                        aria-hidden
-                      />
-                      {p.language}
-                    </span>
+                    {p.title && (
+                      <span className="truncate pl-6 text-xs text-gh-muted">
+                        {p.title}
+                      </span>
+                    )}
                   </a>
                 </li>
               ))
@@ -284,6 +332,16 @@ export default function DashboardPage() {
 
       {/* WYŚRODKOWANY KONTENER TREŚCI (max 1280px) — tylko środek + prawy panel. */}
       <div className="mx-auto max-w-[1280px] px-6 py-6">
+        {/* Licznik streaka — z stats.currentStreak zalogowanego gracza (brak → 0). */}
+        {isAuthed && (
+          <div className="mb-4">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-gh-border bg-gh-surface px-3 py-1 text-sm font-semibold text-gh-text">
+              🔥 {stats?.currentStreak ?? 0}{" "}
+              {dniLabel(stats?.currentStreak ?? 0)} z rzędu
+            </span>
+          </div>
+        )}
+
         <div className="flex flex-col gap-6 lg:flex-row">
           {/* ŚRODEK — generowanie / realizacja questa (głębokie tło #010409) */}
           <section className="min-w-0 flex-1 bg-gh-bg-deep">
