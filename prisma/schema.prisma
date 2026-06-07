@@ -1,0 +1,122 @@
+// Schemat bazy DailyQuest (Neon / Postgres).
+// Połączenie pooled (DATABASE_URL) do zapytań aplikacji, direct (DIRECT_URL) do migracji.
+// Nazwy tabel i kolumn mapowane na snake_case (konwencja Postgresa), pola w kliencie zostają camelCase.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Status zaliczenia questa.
+enum QuestStatus {
+  PENDING
+  PASSED
+  FAILED
+}
+
+// Użytkownik aplikacji (zaciągany z profilu GitHub). Korzeń wszystkich relacji.
+model User {
+  id          String   @id @default(cuid())
+  githubLogin String   @unique @map("github_login")
+  githubName  String?  @map("github_name")
+  avatarUrl   String?  @map("avatar_url")
+  profileUrl  String?  @map("profile_url")
+  bio         String?
+  createdAt   DateTime @default(now()) @map("created_at") // dołączenie do aplikacji
+
+  // Relacje (wszystko spięte przez user_id):
+  quests       Quest[]
+  completions  Completion[]
+  achievements Achievement[]
+  chatMessages ChatMessage[]
+  stats        Stats?
+
+  @@map("users")
+}
+
+// Pojedynczy quest wygenerowany dla użytkownika danego dnia.
+model Quest {
+  id           String      @id @default(cuid())
+  userId       String      @map("user_id")
+  date         DateTime
+  title        String
+  repoName     String      @map("repo_name")
+  why          String
+  instructions String
+  openPart     String      @map("open_part")
+  criteria     Json // lista kryteriów zaliczenia (tablica stringów)
+  status       QuestStatus @default(PENDING)
+  repoUrl      String?     @map("repo_url")
+  questMdUrl   String?     @map("quest_md_url")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completions Completion[]
+
+  @@index([userId])
+  @@map("quests")
+}
+
+// Dziennik ukończeń — źródło heatmapy i streaka.
+model Completion {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  questId           String   @map("quest_id")
+  date              DateTime
+  repoUrl           String?  @map("repo_url")
+  descriptionOfWork String?  @map("description_of_work") // krótki opis do heatmapy
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest Quest @relation(fields: [questId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([questId])
+  @@map("completions")
+}
+
+// Statystyki użytkownika — dokładnie jeden wiersz na usera.
+model Stats {
+  id            String @id @default(cuid())
+  userId        String @unique @map("user_id")
+  currentStreak Int    @default(0) @map("current_streak")
+  longestStreak Int    @default(0) @map("longest_streak")
+  totalQuests   Int    @default(0) @map("total_quests")
+  points        Int    @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("stats")
+}
+
+// Odblokowane osiągnięcia. Para (user_id, type) jest unikalna — przyznawane raz.
+// WAŻNE: wiersze są trwałe — osiągnięcia nie są odbierane (brak kaskady usuwania).
+model Achievement {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  type       String // np. "streak_7"
+  unlockedAt DateTime @default(now()) @map("unlocked_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, type])
+  @@map("achievements")
+}
+
+// Wiadomości czatu użytkownika.
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("chat_messages")
+}
