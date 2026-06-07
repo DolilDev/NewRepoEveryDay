@@ -29,3 +29,24 @@ export function cetDayStart(now: Date = new Date()): Date {
 export function cetTodayIso(now: Date = new Date()): string {
   return cetDayStart(now).toISOString().slice(0, 10);
 }
+
+const PL_MONTHS_GENITIVE = [
+  "stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca",
+  "lipca", "sierpnia", "września", "października", "listopada", "grudnia",
+];
+
+// Względny opis daty questa po polsku ("Dzisiaj", "Wczoraj", "3 dni temu",
+// "tydzień temu", "2 tygodnie temu"), a dla starszych — pełna data.
+// `day` to kanoniczny dzień CET (północ UTC), porównywany z dzisiejszym dniem CET.
+export function relativeQuestDate(day: Date, now: Date = new Date()): string {
+  const diffDays = Math.round(
+    (cetDayStart(now).getTime() - day.getTime()) / 86_400_000,
+  );
+  if (diffDays <= 0) return "Dzisiaj";
+  if (diffDays === 1) return "Wczoraj";
+  if (diffDays < 7) return `${diffDays} dni temu`;
+  if (diffDays < 14) return "tydzień temu";
+  const weeks = Math.floor(diffDays / 7);
+  if (weeks < 5) return `${weeks} tygodnie temu`;
+  return `${day.getUTCDate()} ${PL_MONTHS_GENITIVE[day.getUTCMonth()]} ${day.getUTCFullYear()}`;
+}

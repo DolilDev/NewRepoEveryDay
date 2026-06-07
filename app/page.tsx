@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import Countdown from "@/components/Countdown";
-import { questProjects, previousQuests } from "@/lib/mock-data";
+import { questProjects } from "@/lib/mock-data";
 
 function RepoIcon() {
   return (
@@ -45,6 +45,15 @@ type QuestResult = {
   fileUploaded: boolean;
 };
 
+// Pozycja panelu "Ostatnie questy" — prawdziwy quest z bazy.
+type RecentQuest = {
+  id: string;
+  title: string;
+  repoName: string;
+  repoUrl: string;
+  relativeDate: string;
+};
+
 type Phase = "idle" | "loading" | "success" | "error";
 
 const STORAGE_KEY = "dq:lastQuest";
@@ -63,8 +72,11 @@ export default function DashboardPage() {
   const [result, setResult] = useState<QuestResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [projectQuery, setProjectQuery] = useState("");
+  const [recentQuests, setRecentQuests] = useState<RecentQuest[]>([]);
 
-  // Po odświeżeniu strony przywracamy dzisiejszy wynik (blokada na dziś).
+  // Po odświeżeniu strony przywracamy dzisiejszy wynik z localStorage — to tylko
+  // szybki HINT (działa offline / przed odpowiedzią API). Źródłem prawdy jest baza
+  // (patrz loadQuests niżej), która ten stan potwierdzi albo skoryguje.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -79,13 +91,47 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // Źródło prawdy: questy z bazy. Ustawia panel "Ostatnie questy" oraz — gdy w
+  // bazie jest dzisiejszy quest (limit 1/dzień) — pokazuje go zamiast przycisku.
+  const loadQuests = useCallback(async () => {
+    try {
+      const res = await fetch("/api/quest/recent");
+      if (!res.ok) return;
+      const data = await res.json();
+      setRecentQuests(Array.isArray(data.recent) ? data.recent : []);
+      if (data.today) {
+        setResult(data.today as QuestResult);
+        setPhase((p) => (p === "loading" ? p : "success"));
+        try {
+          localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({ date: todayKey(), result: data.today }),
+          );
+        } catch {
+          // brak localStorage — pomijamy hint
+        }
+      } else {
+        // Baza nie ma dzisiejszego questa → przycisk generowania (nie ruszamy
+        // trwającego generowania ani ekranu błędu).
+        setPhase((p) => (p === "loading" || p === "error" ? p : "idle"));
+        setResult((r) => (r ? null : r));
+      }
+    } catch {
+      // sieć/serwer niedostępny — zostaje stan z localStorage (hint)
+    }
+  }, []);
+
+  // Po zalogowaniu (i przy starcie, jeśli już zalogowany) czytamy questy z bazy.
+  useEffect(() => {
+    if (!isAuthed) return;
+    loadQuests();
+  }, [isAuthed, loadQuests]);
+
   const filteredProjects = useMemo(() => {
     const q = projectQuery.trim().toLowerCase();
     if (!q) return questProjects;
     return questProjects.filter((p) => p.name.toLowerCase().includes(q));
   }, [projectQuery]);
-
-  const recentQuests = previousQuests.slice(0, 5);
 
   async function handleGenerate() {
     if (phase === "loading") return;
@@ -114,6 +160,8 @@ export default function DashboardPage() {
       } catch {
         // brak localStorage — blokada zadziała tylko w obrębie sesji strony
       }
+      // Odśwież panel "Ostatnie questy" o świeżo zapisany quest z bazy.
+      loadQuests();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Nieznany błąd.");
       setPhase("error");
@@ -332,18 +380,23 @@ export default function DashboardPage() {
             )}
           </section>
 
-          {/* PRAWY PANEL — Ostatnie questy: oś czasu z kropkami (max 5; ukryty, gdy pusto) */}
-          {recentQuests.length > 0 && (
-            <aside className="lg:w-[312px] lg:shrink-0">
-              <div className="rounded-md border border-gh-border bg-gh-panel p-4">
-                <header className="mb-4 text-sm font-semibold text-gh-text">
-                  Ostatnie questy
-                </header>
+          {/* PRAWY PANEL — Ostatnie questy: oś czasu z kropkami (max 5, z bazy) */}
+          <aside className="lg:w-[312px] lg:shrink-0">
+            <div className="rounded-md border border-gh-border bg-gh-panel p-4">
+              <header className="mb-4 text-sm font-semibold text-gh-text">
+                Ostatnie questy
+              </header>
 
-                {/* Oś czasu: JEDNA ciągła pionowa linia (#30363d) biegnąca od
-                    pierwszej kropki aż do dołu obszaru zawartości panelu (nie
-                    urywa się na ostatnim queście). Kropki to węzły siedzące na
-                    osi, tekst odsunięty w prawo (gap-3). */}
+              {recentQuests.length === 0 ? (
+                // Pusty stan — dyskretny tekst zamiast mocków.
+                <p className="text-sm text-gh-subtle">
+                  Nie masz jeszcze żadnych questów.
+                </p>
+              ) : (
+                /* Oś czasu: JEDNA ciągła pionowa linia (#30363d) biegnąca od
+                   pierwszej kropki aż do dołu obszaru zawartości panelu (nie
+                   urywa się na ostatnim queście). Kropki to węzły siedzące na
+                   osi, tekst odsunięty w prawo (gap-3). */
                 <div className="relative">
                   <span
                     aria-hidden
@@ -363,7 +416,12 @@ export default function DashboardPage() {
                             niebiesko (#58a6ff) z podkreśleniem, bez zmiany tła. */}
                         <div className="min-w-0 flex-1">
                           <div className="text-xs text-gh-muted">{q.relativeDate}</div>
-                          <a href="#" className="group mt-1 block no-underline">
+                          <a
+                            href={q.repoUrl || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group mt-1 block no-underline"
+                          >
                             <div className="text-sm text-gh-text group-hover:text-gh-blue group-hover:underline">
                               {q.title}
                             </div>
@@ -385,9 +443,9 @@ export default function DashboardPage() {
                     Zobacz historię →
                   </a>
                 </div>
-              </div>
-            </aside>
-          )}
+              )}
+            </div>
+          </aside>
         </div>
       </div>
     </div>
