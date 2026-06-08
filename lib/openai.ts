@@ -97,7 +97,7 @@ function parseQuestJson(content: string): QuestSpec {
 }
 
 const QUEST_SYSTEM_PROMPT = [
-  "Jesteś mentorem programistów w aplikacji DailyQuest.",
+  "Jesteś mentorem programistów w aplikacji NERD - NewEveryRepoDay.",
   "Generujesz codzienne zadanie typu „zrób coś, czego jeszcze nie robiłeś” —",
   "ma wypchnąć użytkownika poza jego dotychczasowe języki i typy projektów.",
   "Odpowiadaj PO POLSKU.",
@@ -196,7 +196,7 @@ ${README_SECTION}
 ${criteria}
 
 ---
-*Wygenerowane automatycznie przez DailyQuest.*
+*Wygenerowane automatycznie przez NERD - NewEveryRepoDay.*
 `;
 }
 
@@ -210,7 +210,7 @@ export type QuestVerdict = {
 };
 
 const EVAL_SYSTEM_PROMPT = [
-  "Jesteś rygorystycznym recenzentem zadań programistycznych w aplikacji DailyQuest.",
+  "Jesteś rygorystycznym recenzentem zadań programistycznych w aplikacji NERD - NewEveryRepoDay.",
   "Oceniasz, czy użytkownik wykonał dzisiejszy quest. Werdykt jest BINARNY:",
   "zaliczone (100/100) TYLKO gdy spełnione są WSZYSTKIE kryteria; inaczej niezaliczone.",
   "WAŻNE: plik QUEST.md to instrukcja systemu (stan startowy repozytorium) — NIE jest",

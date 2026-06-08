@@ -5,9 +5,9 @@ import Footer from "@/components/Footer";
 import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: "DailyQuest",
+  title: "NERD - NewEveryRepoDay",
   description:
-    "Codzienne questy dla programistów — szkielet UI (etap 1, dane przykładowe).",
+    "NERD - NewEveryRepoDay: codzienne questy dla programistów, które wypychają Cię poza znane technologie.",
 };
 
 export default function RootLayout({

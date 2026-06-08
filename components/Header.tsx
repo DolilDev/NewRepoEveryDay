@@ -82,9 +82,15 @@ export default function Header() {
         }`}
       >
         {/* Lewa strona: logo + nazwa */}
-        <Link href="/" className="flex items-center gap-2 text-base font-semibold text-gh-text">
+        <Link
+          href="/"
+          title="NERD - NewEveryRepoDay"
+          className="flex items-center gap-2 text-base font-semibold text-gh-text"
+        >
           <FlameLogo />
-          <span>DailyQuest</span>
+          {/* Pełna nazwa od sm w górę; na wąskich ekranach skrót NERD, by się zmieścił. */}
+          <span className="hidden sm:inline">NERD - NewEveryRepoDay</span>
+          <span className="sm:hidden">NERD</span>
         </Link>
 
         {/* Prawa strona: Ranking → dzwonek → avatar / logowanie */}
