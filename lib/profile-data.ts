@@ -44,6 +44,17 @@ export async function getUserCompletions(login: string | null) {
   });
 }
 
+// Data dołączenia gracza do TEJ strony (NERD) — users.createdAt z naszej bazy,
+// a NIE data założenia konta GitHub. Brak wiersza w users → null.
+export async function getUserJoinedAt(login: string | null): Promise<Date | null> {
+  if (!login) return null;
+  const u = await prisma.user.findUnique({
+    where: { githubLogin: login },
+    select: { createdAt: true },
+  });
+  return u?.createdAt ?? null;
+}
+
 // Zdobyte osiągnięcia gracza — od najwcześniej odblokowanego.
 export async function getUserAchievements(login: string | null) {
   if (!login) return [];

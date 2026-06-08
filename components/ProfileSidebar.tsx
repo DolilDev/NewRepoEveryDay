@@ -1,7 +1,7 @@
 // Lewa kolumna profilu — stała przy obu zakładkach (Overview / Repositories).
 import Avatar from "./Avatar";
 import { auth } from "@/auth";
-import { getUserAchievements } from "@/lib/profile-data";
+import { getUserAchievements, getUserJoinedAt } from "@/lib/profile-data";
 import { achievementMeta } from "@/lib/achievements";
 import { formatPlDate, formatPlMonthYear } from "@/lib/date";
 
@@ -28,6 +28,9 @@ export default async function ProfileSidebar() {
   const gh = user?.github;
   const login = user?.login ?? null;
 
+  // Data dołączenia do TEJ strony (NERD) — z users.createdAt, nie z konta GitHub.
+  const joinedAt = await getUserJoinedAt(login);
+
   // Zdobyte osiągnięcia z bazy (tylko te, które user faktycznie ma).
   const dbAchievements = await getUserAchievements(login);
   const unlocked = dbAchievements.map((a) => ({
@@ -45,10 +48,11 @@ export default async function ProfileSidebar() {
   // Liczniki społeczności z GitHuba — pokazujemy tylko, gdy mamy realne dane.
   const followers = gh ? gh.followers.toLocaleString("pl-PL") : null;
   const following = gh ? gh.following.toLocaleString("pl-PL") : null;
-  // Data dołączenia do GitHuba — tylko gdy znamy ją z profilu.
+  // Data dołączenia do NERD (nasza baza) — miesiąc + rok po polsku. Brak → null.
+  const joinedIso = joinedAt?.toISOString() ?? null;
   const joinedLabel =
-    gh?.createdAt && formatPlMonthYear(gh.createdAt)
-      ? `Dołączył(a) ${formatPlMonthYear(gh.createdAt)}`
+    joinedIso && formatPlMonthYear(joinedIso)
+      ? `Dołączył(a) ${formatPlMonthYear(joinedIso)}`
       : null;
 
   return (
