@@ -107,9 +107,7 @@ export default function Header() {
           className="flex items-center gap-2 text-base font-semibold text-gh-text"
         >
           <FlameLogo />
-          {/* Pełna nazwa od sm w górę; na wąskich ekranach skrót NERD, by się zmieścił. */}
-          <span className="hidden sm:inline">NERD - NewEveryRepoDay</span>
-          <span className="sm:hidden">NERD</span>
+          NERD
         </Link>
 
         {/* Prawa strona: wyszukiwarka profili → Ranking → dzwonek → avatar / logowanie */}
