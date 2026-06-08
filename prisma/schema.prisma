@@ -40,19 +40,24 @@ model User {
 }
 
 // Pojedynczy quest wygenerowany dla użytkownika danego dnia.
+// Model repo-kontenera: quest to PODFOLDER w jednym repo NERD-NewEveryDayRepo.
+// Pola folder* są źródłem prawdy; repoName/repoUrl zostają jako nullable LEGACY
+// (stary model „osobne repo na quest") i nie są już zapisywane.
 model Quest {
   id           String      @id @default(cuid())
   userId       String      @map("user_id")
   date         DateTime
   title        String
-  repoName     String      @map("repo_name")
+  repoName     String?     @map("repo_name") // LEGACY — stary model 1 repo/quest
+  folderName   String?     @map("folder_name") // podfolder w repo-kontenerze (np. NERD-rust-wasm)
   why          String
   instructions String
   openPart     String      @map("open_part")
   criteria     Json // lista kryteriów zaliczenia (tablica stringów)
   status       QuestStatus @default(PENDING)
-  repoUrl      String?     @map("repo_url")
-  questMdUrl   String?     @map("quest_md_url")
+  repoUrl      String?     @map("repo_url") // LEGACY
+  folderUrl    String?     @map("folder_url") // URL do folderu questa w repo-kontenerze
+  questMdUrl   String?     @map("quest_md_url") // URL do QUEST.md w folderze
   createdAt    DateTime    @default(now()) @map("created_at")
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
