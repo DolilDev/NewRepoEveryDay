@@ -2,6 +2,7 @@
 // UWAGA: używać WYŁĄCZNIE w serwerowych API routes. Token nie jest nigdzie
 // wysyłany do przeglądarki — odszyfrowanie wymaga NEXTAUTH_SECRET (tylko serwer).
 import { getToken } from "next-auth/jwt";
+import { cookies } from "next/headers";
 
 export type ServerAuth = {
   accessToken: string;
@@ -38,4 +39,26 @@ export async function getServerAuth(req: Request): Promise<ServerAuth | null> {
       ? token.github.bio
       : null;
   return { accessToken, login, name, avatarUrl, bio };
+}
+
+// Token OAuth zalogowanego gracza odczytany z ciasteczek (do użycia w server
+// components, gdzie nie mamy obiektu Request). Zwraca null, gdy nikt nie jest
+// zalogowany. Token NIE trafia do przeglądarki — służy tylko do serwerowych
+// zapytań do GitHub API (np. dociągnięcie języków cudzego, publicznego repo).
+export async function getCookieAccessToken(): Promise<string | null> {
+  const secureCookie = (process.env.NEXTAUTH_URL ?? "").startsWith("https://");
+  const cookieHeader = cookies()
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
+  const req = new Request("http://localhost", {
+    headers: { cookie: cookieHeader },
+  });
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+    secureCookie,
+  });
+  const accessToken = token?.accessToken;
+  return typeof accessToken === "string" && accessToken ? accessToken : null;
 }

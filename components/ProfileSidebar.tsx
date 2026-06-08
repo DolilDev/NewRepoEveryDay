@@ -1,9 +1,17 @@
 // Lewa kolumna profilu — stała przy obu zakładkach (Overview / Repositories).
+// Czysto prezentacyjna: dane (profil + osiągnięcia) dostaje z layoutu profilu,
+// żeby ten sam komponent działał dla własnego i CUDZEGO profilu.
 import Avatar from "./Avatar";
-import { auth } from "@/auth";
-import { getUserAchievements, getUserJoinedAt } from "@/lib/profile-data";
-import { achievementMeta } from "@/lib/achievements";
 import { formatPlDate, formatPlMonthYear } from "@/lib/date";
+import type { ProfileData } from "@/lib/profile";
+
+// Osiągnięcie gotowe do pokazania (zmapowane z bazy w layoutcie profilu).
+export type SidebarAchievement = {
+  id: string;
+  unlockedDate: string; // YYYY-MM-DD
+  name: string;
+  icon: string;
+};
 
 function PeopleIcon() {
   return (
@@ -21,56 +29,49 @@ function CalendarIcon() {
   );
 }
 
-export default async function ProfileSidebar() {
-  // Dane konta z sesji (avatar/nazwa/login) + profil z GitHub API (bio/liczniki).
-  const session = await auth();
-  const user = session?.user;
-  const gh = user?.github;
-  const login = user?.login ?? null;
+export default function ProfileSidebar({
+  profile,
+  achievements,
+}: {
+  profile: ProfileData;
+  achievements: SidebarAchievement[];
+}) {
+  const { login, name } = profile;
+  const image = profile.avatarUrl ?? undefined;
+  const profileUrl = `https://github.com/${login}`;
 
-  // Data dołączenia do TEJ strony (NERD) — z users.createdAt, nie z konta GitHub.
-  const joinedAt = await getUserJoinedAt(login);
+  // Bio z GitHuba (może być puste → nie renderujemy elementu).
+  const bio = profile.bio;
+  // Liczniki społeczności — tylko gdy mamy realne dane z GitHuba.
+  const followers =
+    profile.followers != null ? profile.followers.toLocaleString("pl-PL") : null;
+  const following =
+    profile.following != null ? profile.following.toLocaleString("pl-PL") : null;
 
-  // Zdobyte osiągnięcia z bazy (tylko te, które user faktycznie ma).
-  const dbAchievements = await getUserAchievements(login);
-  const unlocked = dbAchievements.map((a) => ({
-    id: a.id,
-    unlockedDate: a.unlockedAt.toISOString().slice(0, 10),
-    ...achievementMeta(a.type),
-  }));
-
-  const name = user?.name ?? user?.login ?? "Twój profil";
-  const image = user?.image ?? undefined;
-  const profileUrl = login ? `https://github.com/${login}` : "#";
-
-  // Bio z GitHuba (może być puste → po prostu nie renderujemy elementu).
-  const bio = gh?.bio ?? null;
-  // Liczniki społeczności z GitHuba — pokazujemy tylko, gdy mamy realne dane.
-  const followers = gh ? gh.followers.toLocaleString("pl-PL") : null;
-  const following = gh ? gh.following.toLocaleString("pl-PL") : null;
-  // Data dołączenia do NERD (nasza baza) — miesiąc + rok po polsku. Brak → null.
-  const joinedIso = joinedAt?.toISOString() ?? null;
+  // Data dołączenia do NERD (nasza baza). Osoba niezarejestrowana (istnieje na
+  // GitHubie, ale nie gra u nas) → wyraźne „Nie dołączono" zamiast daty.
+  const joinedIso = profile.joinedAt?.toISOString() ?? null;
   const joinedLabel =
-    joinedIso && formatPlMonthYear(joinedIso)
+    profile.registered && joinedIso && formatPlMonthYear(joinedIso)
       ? `Dołączył(a) ${formatPlMonthYear(joinedIso)}`
-      : null;
+      : "Nie dołączono";
 
   return (
     <aside className="w-full shrink-0 md:w-[296px]">
       <div className="flex flex-col items-center text-center md:items-start md:text-left">
-        <Avatar name={name} login={login ?? ""} image={image} size={260} />
+        <Avatar name={name} login={login} image={image} size={260} />
 
         <h1 className="mt-4 text-2xl font-bold leading-tight text-gh-text">
           {name}
         </h1>
-        {login && (
-          <a
-            href={profileUrl}
-            className="text-xl font-light text-gh-muted hover:text-gh-blue hover:underline"
-          >
-            {login}
-          </a>
-        )}
+        <a
+          href={profileUrl}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="text-xl font-light text-gh-muted hover:text-gh-blue hover:underline"
+        >
+          {login}
+        </a>
 
         {/* Bio renderujemy tylko, gdy faktycznie istnieje — brak opisu = brak elementu. */}
         {bio && <p className="mt-4 text-sm text-gh-text">{bio}</p>}
@@ -88,25 +89,24 @@ export default async function ProfileSidebar() {
           </div>
         )}
 
-        {joinedLabel && (
-          <div className="mt-2 flex items-center gap-2 text-sm text-gh-muted">
-            <CalendarIcon />
-            <span>{joinedLabel}</span>
-          </div>
-        )}
+        {/* Data dołączenia do NERD albo „Nie dołączono" dla niezarejestrowanych. */}
+        <div className="mt-2 flex items-center gap-2 text-sm text-gh-muted">
+          <CalendarIcon />
+          <span>{joinedLabel}</span>
+        </div>
       </div>
 
       {/* Osiągnięcia — pokazujemy WYŁĄCZNIE zdobyte; brak → sekcja znika. */}
-      {unlocked.length > 0 && (
+      {achievements.length > 0 && (
         <section className="mt-6 w-full border-t border-gh-border pt-6">
           <h2 className="mb-4 text-sm font-semibold text-gh-text">
             Osiągnięcia
             <span className="ml-2 font-normal text-gh-muted">
-              {unlocked.length}
+              {achievements.length}
             </span>
           </h2>
           <div className="flex flex-wrap gap-2">
-            {unlocked.map((a) => (
+            {achievements.map((a) => (
               <span
                 key={a.id}
                 title={

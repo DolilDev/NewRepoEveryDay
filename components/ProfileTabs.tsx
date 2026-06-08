@@ -19,27 +19,35 @@ function ListIcon() {
   );
 }
 
+// login = oglądany profil (własny lub cudzy) — buduje trasy /profile/[login].
 // repoCount = liczba questów gracza z bazy (licznik przy „Repositories").
-export default function ProfileTabs({ repoCount }: { repoCount: number }) {
+export default function ProfileTabs({
+  login,
+  repoCount,
+}: {
+  login: string;
+  repoCount: number;
+}) {
   const pathname = usePathname();
+  const base = `/profile/${login}`;
 
   const TABS = [
-    { href: "/profile", label: "Overview", icon: BookIcon, count: null as number | null },
+    { href: base, label: "Overview", icon: BookIcon, count: null as number | null, exact: true },
     {
-      href: "/profile/repositories",
+      href: `${base}/repositories`,
       label: "Repositories",
       icon: ListIcon,
       count: repoCount,
+      exact: false,
     },
   ];
 
   return (
     <nav className="-mb-px flex h-12 items-end gap-4 overflow-x-auto">
       {TABS.map((tab) => {
-        const active =
-          tab.href === "/profile"
-            ? pathname === "/profile"
-            : pathname.startsWith(tab.href);
+        const active = tab.exact
+          ? pathname === tab.href
+          : pathname.startsWith(tab.href);
         const Icon = tab.icon;
         return (
           <Link

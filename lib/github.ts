@@ -4,14 +4,17 @@
 
 const GH_API = "https://api.github.com";
 
-// Wspólne nagłówki uwierzytelnione tokenem OAuth użytkownika.
-function ghHeaders(accessToken: string): Record<string, string> {
-  return {
-    Authorization: `Bearer ${accessToken}`,
+// Wspólne nagłówki do GitHub API. Token jest OPCJONALNY: publiczne dane (profil,
+// języki repo) czytamy też bez niego, ale z tokenem mamy znacznie wyższy limit
+// zapytań (5000/h zamiast 60/h na IP).
+function ghHeaders(accessToken?: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
     "User-Agent": "NERD-NewEveryRepoDay",
   };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  return headers;
 }
 
 export type GitHubProfile = {
@@ -40,6 +43,42 @@ export async function fetchGitHubProfile(
       following: typeof u.following === "number" ? u.following : 0,
       publicRepos: typeof u.public_repos === "number" ? u.public_repos : 0,
       createdAt: typeof u.created_at === "string" ? u.created_at : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export type PublicProfile = {
+  login: string; // kanoniczny login zwrócony przez GitHub
+  name: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+  followers: number;
+  following: number;
+};
+
+// Publiczny profil DOWOLNEGO użytkownika GitHub po loginie (GET /users/{login}).
+// Token opcjonalny (dane publiczne), ale podnosi limit zapytań. 404/błąd → null,
+// co dla wyszukiwarki oznacza „nie ma takiego użytkownika na GitHubie".
+export async function fetchPublicProfile(
+  login: string,
+  accessToken?: string | null,
+): Promise<PublicProfile | null> {
+  try {
+    const res = await fetch(`${GH_API}/users/${encodeURIComponent(login)}`, {
+      headers: ghHeaders(accessToken),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const u = await res.json();
+    return {
+      login: typeof u.login === "string" ? u.login : login,
+      name: typeof u.name === "string" && u.name.trim() ? u.name : null,
+      avatarUrl: typeof u.avatar_url === "string" ? u.avatar_url : null,
+      bio: typeof u.bio === "string" && u.bio.trim() ? u.bio : null,
+      followers: typeof u.followers === "number" ? u.followers : 0,
+      following: typeof u.following === "number" ? u.following : 0,
     };
   } catch {
     return null;

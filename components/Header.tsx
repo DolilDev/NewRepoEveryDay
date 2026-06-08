@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Avatar from "./Avatar";
@@ -11,6 +11,14 @@ function FlameLogo() {
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0">
       <path d="M12 2C12 2 5 7.5 5 13.5C5 17.6421 8.13401 21 12 21C15.866 21 19 17.6421 19 13.5C19 11 17.5 9 17.5 9C17.5 11 16 12 16 12C16 9 13.5 5.5 12 2Z" fill="#2ea043" />
       <path d="M12 21C9.79086 21 8 19.2091 8 17C8 14.5 12 11 12 11C12 11 16 14.5 16 17C16 19.2091 14.2091 21 12 21Z" fill="#39d353" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden className="shrink-0">
+      <path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z" />
     </svg>
   );
 }
@@ -48,8 +56,19 @@ export default function Header() {
   const { data: session, status } = useSession();
   const user = session?.user;
 
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Wyszukiwarka profili: wpisany login GitHub → otwórz /profile/[login] na NERD.
+  const [profileQuery, setProfileQuery] = useState("");
+  function handleProfileSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = profileQuery.trim();
+    if (!q) return;
+    router.push(`/profile/${encodeURIComponent(q)}`);
+    setProfileQuery("");
+  }
 
   // Zamykanie menu avatara po kliknięciu poza nim lub klawiszem Escape.
   useEffect(() => {
@@ -93,8 +112,28 @@ export default function Header() {
           <span className="sm:hidden">NERD</span>
         </Link>
 
-        {/* Prawa strona: Ranking → dzwonek → avatar / logowanie */}
+        {/* Prawa strona: wyszukiwarka profili → Ranking → dzwonek → avatar / logowanie */}
         <div className="flex items-center gap-2">
+          {/* Wyszukiwarka profili po loginie GitHub — Enter otwiera /profile/[login].
+              Ukryta na bardzo wąskich ekranach, by nie ściskać reszty navbara. */}
+          <form
+            onSubmit={handleProfileSearch}
+            role="search"
+            className="hidden sm:block"
+          >
+            <div className="flex h-8 items-center gap-1.5 rounded-md border border-gh-border bg-gh-bg px-2 text-gh-subtle transition-colors focus-within:border-gh-blue">
+              <SearchIcon />
+              <input
+                type="text"
+                value={profileQuery}
+                onChange={(e) => setProfileQuery(e.target.value)}
+                placeholder="Szukaj profilu..."
+                aria-label="Szukaj profilu po loginie GitHub"
+                className="w-32 bg-transparent text-sm text-gh-text placeholder:text-gh-subtle focus:outline-none md:w-44"
+              />
+            </div>
+          </form>
+
           {/* Zakładka Ranking — ikona w obramowaniu, jak powiadomienia */}
           <Link
             href="/leaderboard"

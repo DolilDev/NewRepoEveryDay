@@ -1,4 +1,5 @@
-import { getViewerLogin, getUserQuests } from "@/lib/profile-data";
+import { getProfile } from "@/lib/profile";
+import { getUserQuests } from "@/lib/profile-data";
 import { relativeQuestDate } from "@/lib/date";
 
 function RepoIcon() {
@@ -35,9 +36,16 @@ function statusBadge(status: "PENDING" | "PASSED" | "FAILED") {
   );
 }
 
-export default async function ProfileRepositoriesPage() {
-  const login = await getViewerLogin();
-  const quests = await getUserQuests(login);
+export default async function ProfileRepositoriesPage({
+  params,
+}: {
+  params: { login: string };
+}) {
+  const profile = await getProfile(decodeURIComponent(params.login));
+  // Brak profilu → layout pokazuje komunikat „nie znaleziono".
+  if (!profile) return null;
+
+  const quests = await getUserQuests(profile.login);
 
   return (
     <div>
@@ -67,7 +75,7 @@ export default async function ProfileRepositoriesPage() {
       {/* Lista repozytoriów questowych (od najnowszego do najstarszego) */}
       {quests.length === 0 ? (
         <p className="py-10 text-center text-sm text-gh-muted">
-          Brak repozytoriów — wygeneruj pierwszy quest na stronie głównej.
+          Brak repozytoriów.
         </p>
       ) : (
         <ul>
