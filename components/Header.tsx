@@ -6,15 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Avatar from "./Avatar";
 
-function FlameLogo() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0">
-      <path d="M12 2C12 2 5 7.5 5 13.5C5 17.6421 8.13401 21 12 21C15.866 21 19 17.6421 19 13.5C19 11 17.5 9 17.5 9C17.5 11 16 12 16 12C16 9 13.5 5.5 12 2Z" fill="#2ea043" />
-      <path d="M12 21C9.79086 21 8 19.2091 8 17C8 14.5 12 11 12 11C12 11 16 14.5 16 17C16 19.2091 14.2091 21 12 21Z" fill="#39d353" />
-    </svg>
-  );
-}
-
 function SearchIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden className="shrink-0">
@@ -104,9 +95,8 @@ export default function Header() {
         <Link
           href="/"
           title="NERD - NewEveryRepoDay"
-          className="flex items-center gap-2 text-base font-semibold text-gh-text"
+          className="text-base font-semibold text-gh-text"
         >
-          <FlameLogo />
           NERD
         </Link>
 
