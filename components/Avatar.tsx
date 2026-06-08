@@ -30,7 +30,7 @@ export default function Avatar({
         width={size}
         height={size}
         style={{ width: size, height: size }}
-        className="inline-block shrink-0 select-none rounded-full object-cover"
+        className="inline-block shrink-0 select-none rounded-full border border-gh-border object-cover"
       />
     );
   }
@@ -44,7 +44,7 @@ export default function Avatar({
         backgroundColor: "var(--color-purple)",
         fontSize: Math.round(size * 0.4),
       }}
-      className="inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold text-white"
+      className="inline-flex shrink-0 select-none items-center justify-center rounded-full border border-gh-border font-semibold text-white"
     >
       {initials(name)}
     </span>
