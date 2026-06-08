@@ -109,6 +109,30 @@ export async function fetchUserRepos(
   }
 }
 
+// Publiczne repozytoria danego loginu wraz z wykrytym przez GitHub językiem.
+// type=owner → tylko jego własne repo; sort=pushed → najnowsze najpierw (repo
+// questowe są świeże, więc mieszczą się w pierwszej setce). Token opcjonalny.
+export async function fetchReposByLogin(
+  login: string,
+  accessToken?: string | null,
+): Promise<RepoSummary[]> {
+  try {
+    const res = await fetch(
+      `${GH_API}/users/${encodeURIComponent(login)}/repos?per_page=100&sort=pushed&type=owner`,
+      { headers: ghHeaders(accessToken), cache: "no-store" },
+    );
+    if (!res.ok) return [];
+    const arr = await res.json();
+    if (!Array.isArray(arr)) return [];
+    return arr.map((r) => ({
+      name: typeof r?.name === "string" ? r.name : "",
+      language: typeof r?.language === "string" ? r.language : null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // Tekstowe podsumowanie profilu (języki + przykładowe repo) dla modelu.
 export function buildProfileSummary(repos: RepoSummary[]): string {
   if (repos.length === 0) {

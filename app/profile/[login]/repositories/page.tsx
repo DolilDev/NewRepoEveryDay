@@ -1,5 +1,7 @@
+import LanguageDot from "@/components/LanguageDot";
 import { getProfile } from "@/lib/profile";
 import { getUserQuests } from "@/lib/profile-data";
+import { getRepoLanguages } from "@/lib/repo-language";
 import { relativeQuestDate } from "@/lib/date";
 
 function RepoIcon() {
@@ -45,7 +47,10 @@ export default async function ProfileRepositoriesPage({
   // Brak profilu → layout pokazuje komunikat „nie znaleziono".
   if (!profile) return null;
 
-  const quests = await getUserQuests(profile.login);
+  const [quests, langMap] = await Promise.all([
+    getUserQuests(profile.login),
+    getRepoLanguages(profile.login),
+  ]);
 
   return (
     <div>
@@ -102,6 +107,7 @@ export default async function ProfileRepositoriesPage({
                 </div>
                 <p className="mt-2 text-sm text-gh-muted">{repo.title}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-gh-muted">
+                  <LanguageDot language={langMap.get(repo.repoName) ?? null} />
                   <span>Utworzono {relativeQuestDate(repo.date)}</span>
                 </div>
               </div>

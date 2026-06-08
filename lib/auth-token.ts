@@ -3,6 +3,7 @@
 // wysyłany do przeglądarki — odszyfrowanie wymaga NEXTAUTH_SECRET (tylko serwer).
 import { getToken } from "next-auth/jwt";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 export type ServerAuth = {
   accessToken: string;
@@ -45,7 +46,7 @@ export async function getServerAuth(req: Request): Promise<ServerAuth | null> {
 // components, gdzie nie mamy obiektu Request). Zwraca null, gdy nikt nie jest
 // zalogowany. Token NIE trafia do przeglądarki — służy tylko do serwerowych
 // zapytań do GitHub API (np. dociągnięcie języków cudzego, publicznego repo).
-export async function getCookieAccessToken(): Promise<string | null> {
+export const getCookieAccessToken = cache(async (): Promise<string | null> => {
   const secureCookie = (process.env.NEXTAUTH_URL ?? "").startsWith("https://");
   const cookieHeader = cookies()
     .getAll()
@@ -61,4 +62,4 @@ export async function getCookieAccessToken(): Promise<string | null> {
   });
   const accessToken = token?.accessToken;
   return typeof accessToken === "string" && accessToken ? accessToken : null;
-}
+});

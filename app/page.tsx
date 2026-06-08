@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import Countdown from "@/components/Countdown";
+import LanguageDot from "@/components/LanguageDot";
 
 function RepoIcon() {
   return (
@@ -72,6 +73,7 @@ type Project = {
   name: string;
   title: string;
   repoUrl: string;
+  language: string | null; // język repo z GitHuba (kolorowa kropka) lub null
 };
 
 // Statystyki gracza — na razie do licznika streaka w nagłówku dashboardu.
@@ -321,6 +323,13 @@ export default function DashboardPage() {
                       <span className="truncate pl-6 text-xs text-gh-muted">
                         {p.title}
                       </span>
+                    )}
+                    {/* Kropka języka repo (kolor jak na GitHubie); brak języka → brak kropki. */}
+                    {p.language && (
+                      <LanguageDot
+                        language={p.language}
+                        className="pl-6 text-xs text-gh-muted"
+                      />
                     )}
                   </a>
                 </li>
