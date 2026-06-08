@@ -132,7 +132,7 @@ export default function Header() {
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
                 title={`${user.name ?? user.login} (@${user.login})`}
-                className="flex items-center rounded-full transition hover:ring-2 hover:ring-gh-border"
+                className="flex items-center rounded-full"
               >
                 <Avatar
                   name={user.name ?? user.login ?? "U"}
