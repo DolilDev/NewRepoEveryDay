@@ -21,7 +21,7 @@ export default function Footer() {
   return (
     <footer className={isProfile ? "bg-gh-panel" : "mt-12 bg-gh-bg-deep"}>
       <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-center gap-x-2 gap-y-1 px-6 py-6 text-xs text-gh-muted">
-        <span>DailyQuest — statyczny szkielet UI.</span>
+        <span>NERD - NewEveryRepoDay</span>
         <span className="text-gh-subtle">Zrobione przez</span>
         <a
           href="https://github.com/DolilDev"
