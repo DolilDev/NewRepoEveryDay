@@ -7,7 +7,7 @@ const MODEL = "gpt-4o-mini";
 
 export type QuestSpec = {
   title: string;
-  repoName: string;
+  folderName: string; // nazwa PODFOLDERU w repo-kontenerze (np. NERD-rust-wasm)
   why: string;
   instructions: string;
   openPart: string;
@@ -52,8 +52,9 @@ async function callOpenAI(
   return content;
 }
 
-// Sprowadza dowolny string do formatu nazwy repo: daily-quest-<slug>.
-export function normalizeRepoName(raw: string): string {
+// Sprowadza dowolny string do formatu nazwy PODFOLDERU questa: NERD-<slug>.
+// (Model repo-kontenera: quest to folder, nie osobne repo.)
+export function normalizeFolderName(raw: string): string {
   let slug = (raw ?? "")
     .toLowerCase()
     .normalize("NFKD")
@@ -62,10 +63,11 @@ export function normalizeRepoName(raw: string): string {
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  slug = slug.replace(/^daily-quest-?/, "");
+  // Zdejmij ewentualny prefiks (z modelu lub starego formatu), dodamy własny.
+  slug = slug.replace(/^nerd-?/, "").replace(/^daily-quest-?/, "");
   if (!slug) slug = Math.random().toString(36).slice(2, 7);
 
-  return `daily-quest-${slug}`.slice(0, 90).replace(/-+$/g, "");
+  return `NERD-${slug}`.slice(0, 90).replace(/-+$/g, "");
 }
 
 // Bezpieczny parser odpowiedzi modelu — rzuca czytelny błąd przy braku pól.
@@ -87,13 +89,13 @@ function parseQuestJson(content: string): QuestSpec {
         .filter((c): c is string => typeof c === "string" && c.trim().length > 0)
         .map((c) => c.trim())
     : [];
-  const repoName = normalizeRepoName(str(obj.repoName) || title);
+  const folderName = normalizeFolderName(str(obj.folderName) || title);
 
   if (!title || !instructions || criteria.length === 0) {
     throw new Error("Model zwrócił niekompletny quest (brak tytułu/instrukcji/kryteriów).");
   }
 
-  return { title, repoName, why, instructions, openPart, criteria };
+  return { title, folderName, why, instructions, openPart, criteria };
 }
 
 const QUEST_SYSTEM_PROMPT = [
@@ -118,8 +120,8 @@ const QUEST_SYSTEM_PROMPT = [
   "",
   "Odpowiadaj PO POLSKU.",
   "Zwróć WYŁĄCZNIE obiekt JSON (bez markdown, bez ```), o dokładnie tych polach:",
-  '{ "title": string, "repoName": string, "why": string, "instructions": string, "openPart": string, "criteria": string[] }',
-  'repoName MUSI mieć format "daily-quest-<krótki-slug>": tylko małe litery i myślniki.',
+  '{ "title": string, "folderName": string, "why": string, "instructions": string, "openPart": string, "criteria": string[] }',
+  'folderName MUSI mieć format "NERD-<krótki-slug>": prefiks "NERD-", dalej tylko małe litery i myślniki (np. NERD-rust-wasm).',
   "why: dlaczego akurat to zadanie i ten stack — powiązane z profilem i z tym, czego user NIE robił.",
   "instructions: treściwy opis projektu z podziałem na moduły/etapy — co zbudować i jak ma być",
   "  poukładane (warstwy, główne komponenty, obsługa błędów). Konkretnie, nie ogólnikowo.",
@@ -146,8 +148,8 @@ export async function generateQuest(profileSummary: string): Promise<QuestSpec> 
   return parseQuestJson(content);
 }
 
-// Gdy nazwa repo jest zajęta — prosimy model o INNĄ nazwę (inny slug).
-export async function generateRepoName(
+// Gdy nazwa folderu questa jest zajęta — prosimy model o INNĄ nazwę (inny slug).
+export async function generateFolderName(
   title: string,
   avoid: string[],
 ): Promise<string> {
@@ -156,13 +158,13 @@ export async function generateRepoName(
       {
         role: "system",
         content:
-          'Zwróć WYŁĄCZNIE JSON: { "repoName": "daily-quest-<slug>" }. ' +
-          "Tylko małe litery i myślniki, krótko i opisowo.",
+          'Zwróć WYŁĄCZNIE JSON: { "folderName": "NERD-<slug>" }. ' +
+          'Prefiks "NERD-", dalej tylko małe litery i myślniki, krótko i opisowo.',
       },
       {
         role: "user",
         content:
-          `Tytuł questa: "${title}". Zaproponuj NOWĄ, inną nazwę repozytorium. ` +
+          `Tytuł questa: "${title}". Zaproponuj NOWĄ, inną nazwę folderu. ` +
           `Nie używaj żadnej z tych zajętych nazw: ${avoid.join(", ") || "(brak)"}.`,
       },
     ],
@@ -172,15 +174,15 @@ export async function generateRepoName(
   let candidate = "";
   try {
     const obj = JSON.parse(content);
-    if (typeof obj?.repoName === "string") candidate = obj.repoName;
+    if (typeof obj?.folderName === "string") candidate = obj.folderName;
   } catch {
     // zignoruj — poniżej fallback
   }
 
-  let name = normalizeRepoName(candidate || title);
+  let name = normalizeFolderName(candidate || title);
   // Gdy model uparcie zwraca zajętą nazwę — dokładamy losowy sufiks.
   if (avoid.includes(name)) {
-    name = normalizeRepoName(`${title}-${Math.random().toString(36).slice(2, 6)}`);
+    name = normalizeFolderName(`${title}-${Math.random().toString(36).slice(2, 6)}`);
   }
   return name;
 }

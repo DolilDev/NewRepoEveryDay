@@ -210,24 +210,117 @@ export async function createRepo(
   return { ok: false, status: res.status, alreadyExists: res.status === 422, message };
 }
 
-// Wrzuca plik QUEST.md do repo (PUT /repos/{owner}/{repo}/contents/QUEST.md).
-// Dla świeżego, pustego repo tworzy pierwszy commit i gałąź domyślną.
-export async function putQuestFile(
+// Koduje ścieżkę do URL-a Contents API zachowując ukośniki (każdy SEGMENT osobno),
+// dzięki czemu działają ścieżki zagnieżdżone, np. "NERD-rust-wasm/QUEST.md".
+function encodePath(path: string): string {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
+// Pobiera repozytorium (GET /repos/{owner}/{repo}). Rozróżnia trzy przypadki:
+// istnieje (200), nie ma (404) i inny błąd — to kluczowe dla modelu repo-kontenera
+// (utwórz dokładnie raz, użyj istniejącego). Wynik 200 zwraca gałąź domyślną i URL.
+export type GetRepoResult =
+  | {
+      ok: true;
+      defaultBranch: string;
+      htmlUrl: string;
+      owner: string;
+      isPrivate: boolean;
+    }
+  | { ok: false; status: number };
+
+export async function getRepo(
   accessToken: string,
   owner: string,
   repo: string,
-  markdown: string,
+): Promise<GetRepoResult> {
+  try {
+    const res = await fetch(`${GH_API}/repos/${owner}/${repo}`, {
+      headers: ghHeaders(accessToken),
+      cache: "no-store",
+    });
+    if (!res.ok) return { ok: false, status: res.status };
+    const d = await res.json();
+    return {
+      ok: true,
+      defaultBranch:
+        typeof d?.default_branch === "string" ? d.default_branch : "main",
+      htmlUrl: typeof d?.html_url === "string" ? d.html_url : "",
+      owner: typeof d?.owner?.login === "string" ? d.owner.login : owner,
+      isPrivate: Boolean(d?.private),
+    };
+  } catch {
+    return { ok: false, status: 0 };
+  }
+}
+
+// Czy ścieżka (plik LUB folder) istnieje w repo: GET .../contents/{path}.
+// 200 → istnieje, cokolwiek innego → traktujemy jako wolne (świeży, pusty
+// kontener bez gałęzi zwraca 404 dla wszystkiego). Używane do wykrycia kolizji
+// nazwy folderu questa.
+export async function pathExists(
+  accessToken: string,
+  owner: string,
+  repo: string,
+  path: string,
+  ref?: string,
 ): Promise<boolean> {
-  const content = Buffer.from(markdown, "utf-8").toString("base64");
+  try {
+    const q = ref ? `?ref=${encodeURIComponent(ref)}` : "";
+    const res = await fetch(
+      `${GH_API}/repos/${owner}/${repo}/contents/${encodePath(path)}${q}`,
+      { headers: ghHeaders(accessToken), cache: "no-store" },
+    );
+    return res.status === 200;
+  } catch {
+    return false;
+  }
+}
+
+// SHA pliku pod ścieżką — wymagane przez GitHub do NADPISANIA istniejącego pliku
+// (PUT z polem sha). Brak pliku / błąd → null (wtedy PUT tworzy nowy plik).
+export async function getFileSha(
+  accessToken: string,
+  owner: string,
+  repo: string,
+  path: string,
+  ref?: string,
+): Promise<string | null> {
+  try {
+    const q = ref ? `?ref=${encodeURIComponent(ref)}` : "";
+    const res = await fetch(
+      `${GH_API}/repos/${owner}/${repo}/contents/${encodePath(path)}${q}`,
+      { headers: ghHeaders(accessToken), cache: "no-store" },
+    );
+    if (!res.ok) return null;
+    const d = await res.json();
+    return typeof d?.sha === "string" ? d.sha : null;
+  } catch {
+    return null;
+  }
+}
+
+// Zapisuje plik tekstowy w repo (PUT .../contents/{path}). Z podanym `sha`
+// istniejącego pliku NADPISuje go; bez sha tworzy nowy. Dla pustego repo pierwszy
+// PUT tworzy pierwszy commit i gałąź domyślną. Zwraca true przy powodzeniu.
+export async function putFile(
+  accessToken: string,
+  owner: string,
+  repo: string,
+  path: string,
+  message: string,
+  text: string,
+  sha?: string | null,
+): Promise<boolean> {
+  const content = Buffer.from(text, "utf-8").toString("base64");
+  const body: Record<string, unknown> = { message, content };
+  if (sha) body.sha = sha;
   const res = await fetch(
-    `${GH_API}/repos/${owner}/${repo}/contents/QUEST.md`,
+    `${GH_API}/repos/${owner}/${repo}/contents/${encodePath(path)}`,
     {
       method: "PUT",
       headers: { ...ghHeaders(accessToken), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: "Dodaj QUEST.md — instrukcja dzisiejszego questa",
-        content,
-      }),
+      body: JSON.stringify(body),
     },
   );
   return res.ok;
