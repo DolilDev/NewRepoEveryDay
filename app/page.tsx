@@ -39,8 +39,8 @@ function Spinner() {
 
 type QuestResult = {
   title: string;
-  repoName: string;
-  repoUrl: string;
+  folderName: string | null; // nazwa podfolderu questa w repo-kontenerze
+  folderUrl: string; // link do folderu questa na GitHubie
   questFileUrl: string;
   fileUploaded: boolean;
   status?: "PENDING" | "PASSED" | "FAILED"; // brak = świeżo wygenerowany (PENDING)
@@ -62,18 +62,18 @@ type SubmitPhase = "idle" | "checking" | "passed" | "rejected" | "error";
 type RecentQuest = {
   id: string;
   title: string;
-  repoName: string;
-  repoUrl: string;
+  folderName: string | null;
+  folderUrl: string;
   relativeDate: string;
 };
 
-// Repozytorium questowe do lewego panelu "Twoje ostatnie projekty" (z tabeli quests).
+// Quest do lewego panelu "Twoje ostatnie projekty" (z tabeli quests).
 type Project = {
   id: string;
-  name: string;
+  name: string; // nazwa folderu questa
   title: string;
-  repoUrl: string;
-  language: string | null; // język repo z GitHuba (kolorowa kropka) lub null
+  folderUrl: string; // link do folderu w repo-kontenerze
+  language: string | null; // język folderu (kolorowa kropka) lub null
 };
 
 // Statystyki gracza — na razie do licznika streaka w nagłówku dashboardu.
@@ -307,7 +307,7 @@ export default function DashboardPage() {
               filteredProjects.map((p) => (
                 <li key={p.id}>
                   <a
-                    href={p.repoUrl || "#"}
+                    href={p.folderUrl || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="group flex min-w-0 flex-col gap-1 py-2"
@@ -358,7 +358,9 @@ export default function DashboardPage() {
               // STAN: generowanie w toku
               <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 text-gh-muted">
                 <Spinner />
-                <p className="text-sm">Generuję quest i tworzę repozytorium…</p>
+                <p className="text-sm">
+                  Generuję quest i tworzę folder w repo-kontenerze…
+                </p>
                 <p className="text-xs text-gh-subtle">To może chwilę potrwać.</p>
               </div>
             ) : phase === "error" ? (
@@ -386,29 +388,29 @@ export default function DashboardPage() {
                     Dzisiejszy quest
                   </span>
                   <span className="rounded-full border border-gh-green/40 bg-gh-green/10 px-2 py-1 text-xs font-semibold text-gh-green">
-                    {completed ? "Zaliczony 100/100" : "Repo utworzone"}
+                    {completed ? "Zaliczony 100/100" : "Folder utworzony"}
                   </span>
                 </header>
 
                 <div className="space-y-4 p-4">
                   <div className="rounded-md border border-gh-green/40 bg-gh-green/10 px-4 py-3 text-sm text-gh-text">
-                    ✅ Repo zostało utworzone — cała instrukcja questa jest w nim
-                    (plik <span className="font-mono">QUEST.md</span>).
+                    ✅ Folder questa został utworzony w repo-kontenerze — instrukcja
+                    jest w nim (plik <span className="font-mono">QUEST.md</span>).
                   </div>
 
                   <h2 className="text-xl font-semibold text-gh-text">
                     {result.title}
                   </h2>
 
-                  {/* Nazwa repo */}
+                  {/* Nazwa folderu questa */}
                   <div>
                     <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-gh-muted">
-                      Twoje repozytorium
+                      Folder questa
                     </div>
                     <div className="flex items-center gap-2 rounded-md border border-gh-border bg-gh-bg px-3 py-2">
                       <RepoIcon />
                       <span className="truncate font-mono text-sm text-gh-text">
-                        {result.repoName}
+                        {result.folderName ?? "—"}
                       </span>
                     </div>
                   </div>
@@ -416,12 +418,12 @@ export default function DashboardPage() {
                   {/* Linki do GitHuba (nowa karta) */}
                   <div className="flex flex-wrap gap-2">
                     <a
-                      href={result.repoUrl}
+                      href={result.folderUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 rounded-md bg-gh-green px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
                     >
-                      Otwórz repozytorium na GitHubie ↗
+                      Otwórz folder questa ↗
                     </a>
                     {result.fileUploaded && (
                       <a
@@ -437,7 +439,7 @@ export default function DashboardPage() {
 
                   {!result.fileUploaded && (
                     <p className="text-xs text-gh-red">
-                      Repo powstało, ale nie udało się dodać pliku QUEST.md —
+                      Folder powstał, ale nie udało się dodać pliku QUEST.md —
                       możesz spróbować wygenerować quest ponownie jutro.
                     </p>
                   )}
@@ -527,7 +529,7 @@ export default function DashboardPage() {
                       <span className="ml-1 text-gh-subtle">(północ CET)</span>
                     </div>
                     <div className="mt-1 text-xs text-gh-subtle">
-                      Repozytorium musi pozostać publiczne.
+                      Repo-kontener musi pozostać publiczne.
                     </div>
                   </div>
                   <button
@@ -554,7 +556,7 @@ export default function DashboardPage() {
                 </button>
                 {!isAuthed && authStatus !== "loading" && (
                   <p className="text-xs text-gh-subtle">
-                    Quest tworzy publiczne repo na Twoim koncie GitHub.
+                    Quest tworzy podfolder w Twoim repo-kontenerze na GitHubie.
                   </p>
                 )}
               </div>
@@ -598,7 +600,7 @@ export default function DashboardPage() {
                         <div className="min-w-0 flex-1">
                           <div className="text-xs text-gh-muted">{q.relativeDate}</div>
                           <a
-                            href={q.repoUrl || "#"}
+                            href={q.folderUrl || "#"}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="group mt-1 block no-underline"
@@ -607,7 +609,7 @@ export default function DashboardPage() {
                               {q.title}
                             </div>
                             <div className="truncate font-mono text-xs text-gh-muted group-hover:text-gh-blue group-hover:underline">
-                              {q.repoName}
+                              {q.folderName ?? "—"}
                             </div>
                           </a>
                         </div>

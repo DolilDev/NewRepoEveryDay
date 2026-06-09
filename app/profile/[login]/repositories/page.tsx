@@ -1,7 +1,7 @@
 import LanguageDot from "@/components/LanguageDot";
 import { getProfile } from "@/lib/profile";
 import { getUserQuests } from "@/lib/profile-data";
-import { getRepoLanguages } from "@/lib/repo-language";
+import { getFolderLanguages } from "@/lib/repo-language";
 import { relativeQuestDate } from "@/lib/date";
 
 function RepoIcon() {
@@ -49,7 +49,7 @@ export default async function ProfileRepositoriesPage({
 
   const [quests, langMap] = await Promise.all([
     getUserQuests(profile.login),
-    getRepoLanguages(profile.login),
+    getFolderLanguages(profile.login),
   ]);
 
   return (
@@ -93,12 +93,12 @@ export default async function ProfileRepositoriesPage({
                 <div className="flex flex-wrap items-center gap-2">
                   <RepoIcon />
                   <a
-                    href={repo.repoUrl ?? "#"}
+                    href={repo.folderUrl ?? "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-lg font-semibold text-gh-blue hover:underline"
                   >
-                    {repo.repoName}
+                    {repo.folderName ?? "(bez folderu)"}
                   </a>
                   <span className="rounded-full border border-gh-border px-2 py-0.5 text-xs font-medium text-gh-muted">
                     Public
@@ -107,7 +107,9 @@ export default async function ProfileRepositoriesPage({
                 </div>
                 <p className="mt-2 text-sm text-gh-muted">{repo.title}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-gh-muted">
-                  <LanguageDot language={langMap.get(repo.repoName) ?? null} />
+                  <LanguageDot
+                    language={repo.folderName ? langMap.get(repo.folderName) ?? null : null}
+                  />
                   <span>Utworzono {relativeQuestDate(repo.date)}</span>
                 </div>
               </div>

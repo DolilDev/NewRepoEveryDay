@@ -29,8 +29,8 @@ export async function GET(req: Request) {
     top && top.date.getTime() === cetDayStart().getTime()
       ? {
           title: top.title,
-          repoName: top.repoName,
-          repoUrl: top.repoUrl ?? "",
+          folderName: top.folderName,
+          folderUrl: top.folderUrl ?? "",
           questFileUrl: top.questMdUrl ?? "",
           fileUploaded: Boolean(top.questMdUrl),
           status: top.status, // PENDING / PASSED — decyduje, czy quest jest ukończony
@@ -40,8 +40,8 @@ export async function GET(req: Request) {
   const recent = quests.map((q) => ({
     id: q.id,
     title: q.title,
-    repoName: q.repoName,
-    repoUrl: q.repoUrl ?? "",
+    folderName: q.folderName,
+    folderUrl: q.folderUrl ?? "",
     relativeDate: relativeQuestDate(q.date),
   }));
 

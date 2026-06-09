@@ -5,7 +5,7 @@
 import { NextResponse } from "next/server";
 import { getServerAuth } from "@/lib/auth-token";
 import { prisma } from "@/lib/prisma";
-import { getRepoLanguages } from "@/lib/repo-language";
+import { getFolderLanguages } from "@/lib/repo-language";
 
 export const runtime = "nodejs";
 
@@ -37,14 +37,14 @@ export async function GET(req: Request) {
       }
     : null;
 
-  // Język każdego repo questowego dociągnięty z GitHuba (do kolorowej kropki).
-  const langMap = await getRepoLanguages(auth.login);
+  // Język każdego folderu questa wyznaczony z drzewa repo-kontenera (kolorowa kropka).
+  const langMap = await getFolderLanguages(auth.login);
   const projects = user.quests.map((q) => ({
     id: q.id,
-    name: q.repoName,
+    name: q.folderName ?? "(bez folderu)",
     title: q.title,
-    repoUrl: q.repoUrl ?? "",
-    language: langMap.get(q.repoName) ?? null,
+    folderUrl: q.folderUrl ?? "",
+    language: q.folderName ? langMap.get(q.folderName) ?? null : null,
   }));
 
   return NextResponse.json({ stats, projects });

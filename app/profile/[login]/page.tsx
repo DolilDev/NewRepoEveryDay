@@ -6,7 +6,7 @@ import {
   getUserQuests,
   getUserCompletions,
 } from "@/lib/profile-data";
-import { getRepoLanguages } from "@/lib/repo-language";
+import { getFolderLanguages } from "@/lib/repo-language";
 import { relativeQuestDate } from "@/lib/date";
 import { buildQuestCalendar } from "@/lib/calendar";
 
@@ -58,7 +58,7 @@ export default async function ProfileOverviewPage({
     getUserStats(login),
     getUserQuests(login),
     getUserCompletions(login),
-    getRepoLanguages(login),
+    getFolderLanguages(login),
   ]);
 
   // Siatka kalendarza (Pon–Nd, ostatni rok) z ukończeń. Brak → pusta siatka, 0.
@@ -108,13 +108,13 @@ export default async function ProfileOverviewPage({
               >
                 <div className="flex items-center justify-between gap-2">
                   <a
-                    href={repo.repoUrl ?? "#"}
+                    href={repo.folderUrl ?? "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gh-blue hover:underline"
                   >
                     <RepoIcon />
-                    <span className="truncate">{repo.repoName}</span>
+                    <span className="truncate">{repo.folderName ?? "(bez folderu)"}</span>
                   </a>
                   {statusBadge(repo.status)}
                 </div>
@@ -123,7 +123,9 @@ export default async function ProfileOverviewPage({
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gh-muted">
                   <span>Utworzono {relativeQuestDate(repo.date)}</span>
-                  <LanguageDot language={langMap.get(repo.repoName) ?? null} />
+                  <LanguageDot
+                    language={repo.folderName ? langMap.get(repo.folderName) ?? null : null}
+                  />
                 </div>
               </div>
             ))}
