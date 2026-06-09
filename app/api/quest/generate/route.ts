@@ -10,6 +10,7 @@ import {
   ensureContainer,
   folderUrlFor,
   questMdUrlFor,
+  regenerateContainerReadme,
   CONTAINER_REPO,
 } from "@/lib/container";
 import { prisma } from "@/lib/prisma";
@@ -130,7 +131,9 @@ export async function POST(req: Request) {
       },
     });
 
-    // (Część 6 doda tu regenerację README kontenera — spisu questów.)
+    // Część 6: przegeneruj spis questów w README kontenera (best-effort —
+    // nie wywraca generowania, jeśli się nie uda).
+    await regenerateContainerReadme(accessToken, login);
 
     // Do przeglądarki wracają WYŁĄCZNIE publiczne informacje o folderze questa.
     return NextResponse.json({

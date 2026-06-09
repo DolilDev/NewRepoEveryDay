@@ -7,7 +7,7 @@ import { getServerAuth } from "@/lib/auth-token";
 import { prisma } from "@/lib/prisma";
 import { cetDayStart } from "@/lib/date";
 import { collectFolderMaterial } from "@/lib/quest-review";
-import { CONTAINER_REPO } from "@/lib/container";
+import { CONTAINER_REPO, regenerateContainerReadme } from "@/lib/container";
 import { evaluateQuest } from "@/lib/openai";
 
 export const runtime = "nodejs";
@@ -164,6 +164,10 @@ export async function POST(req: Request) {
 
       return { currentStreak, longestStreak, totalQuests, points, pointsAwarded };
     });
+
+    // Część 6: odśwież spis questów w README kontenera (status tego questa → ✅).
+    // Best-effort — zaliczenie jest już zapisane, więc błąd README nie cofa go.
+    await regenerateContainerReadme(accessToken, login);
 
     return NextResponse.json({
       passed: true,

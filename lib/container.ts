@@ -2,7 +2,8 @@
 // w którym każdy quest to osobny PODFOLDER. Ten moduł trzyma stałą nazwę kontenera,
 // zapewnia jego istnienie i składa adresy URL folderów/plików.
 // UWAGA: tylko po stronie serwera — używa tokenu GitHub.
-import { getRepo, createRepo, putFile } from "@/lib/github";
+import { getRepo, createRepo, putFile, getFileSha } from "@/lib/github";
+import { prisma } from "@/lib/prisma";
 
 // Stała nazwa repo-kontenera — jedno na użytkownika. Spójna z scripts/db-reset.mjs.
 export const CONTAINER_REPO = "NERD-NewEveryDayRepo";
@@ -96,4 +97,109 @@ export function questMdUrlFor(
   folderName: string,
 ): string {
   return `${htmlUrl}/blob/${branch}/${folderName}/QUEST.md`;
+}
+
+// --- Część 6: automatyczne README kontenera (spis questów) ------------------
+
+type ReadmeQuest = {
+  title: string;
+  why: string;
+  folderName: string | null;
+  status: string; // QuestStatus: PENDING / PASSED / FAILED
+};
+
+// Zabezpiecza tekst do komórki tabeli markdown: zwija nowe linie i escapuje `|`.
+function cell(text: string): string {
+  return text.replace(/\r?\n+/g, " ").replace(/\|/g, "\\|").trim();
+}
+
+// Krótki opis questa do kolumny „Opis": pierwsze zdanie z `why` (fallback: tytuł),
+// przycięte do rozsądnej długości.
+function shortDescription(q: ReadmeQuest): string {
+  const src = (q.why || q.title || "").replace(/\s+/g, " ").trim();
+  const m = src.match(/^(.+?[.!?])(\s|$)/);
+  let s = (m ? m[1] : src).trim() || q.title.trim();
+  if (s.length > 140) s = `${s.slice(0, 139).trimEnd()}…`;
+  return s;
+}
+
+// Buduje CAŁĄ treść README kontenera z aktualnego stanu questów (czysty string,
+// składany przez aplikację — NIE przez OpenAI). Questy podajemy od najnowszego.
+// README jest regenerowane w całości, więc nigdy nie ma duplikatów.
+export function buildContainerReadme(quests: ReadmeQuest[]): string {
+  const header = [
+    "# NERD - New Every Day Repo",
+    "",
+    "Kolekcja codziennych questów z aplikacji NERD — jeden quest dziennie, każdy w" +
+      " osobnym podfolderze z plikiem `QUEST.md` (instrukcją) i Twoim rozwiązaniem.",
+    "",
+  ];
+
+  if (quests.length === 0) {
+    return [
+      ...header,
+      "_Brak questów — wygeneruj pierwszy w aplikacji NERD._",
+      "",
+    ].join("\n");
+  }
+
+  const rows = quests.map((q) => {
+    const status = q.status === "PASSED" ? "✅" : "⏳";
+    const folder = q.folderName
+      ? `[${cell(q.folderName)}](./${encodeURI(q.folderName)})`
+      : "—";
+    return `| ${status} | ${cell(q.title)} | ${cell(shortDescription(q))} | ${folder} |`;
+  });
+
+  return [
+    ...header,
+    "| Status | Quest | Opis | Folder |",
+    "| :----: | ----- | ---- | ------ |",
+    ...rows,
+    "",
+    "---",
+    "_Spis generowany automatycznie przez NERD przy każdym dodaniu i zaliczeniu questa._",
+    "",
+  ].join("\n");
+}
+
+// Regeneruje i NADPISUJE README kontenera danego użytkownika aktualnym spisem
+// questów z bazy. Best-effort: błąd (brak kontenera, problem z GitHubem) zwraca
+// false i NIE może wywrócić generowania/oceny questa, które ją wołają.
+export async function regenerateContainerReadme(
+  accessToken: string,
+  login: string,
+): Promise<boolean> {
+  try {
+    const repo = await getRepo(accessToken, login, CONTAINER_REPO);
+    if (!repo.ok) return false;
+    const owner = repo.owner || login;
+
+    const quests = await prisma.quest.findMany({
+      where: { user: { githubLogin: login } },
+      orderBy: { date: "desc" },
+      select: { title: true, why: true, folderName: true, status: true },
+    });
+
+    const markdown = buildContainerReadme(quests);
+    // Do nadpisania istniejącego README potrzebny jest jego sha (brak → tworzy nowy).
+    const sha = await getFileSha(
+      accessToken,
+      owner,
+      CONTAINER_REPO,
+      "README.md",
+      repo.defaultBranch,
+    );
+    return await putFile(
+      accessToken,
+      owner,
+      CONTAINER_REPO,
+      "README.md",
+      "Aktualizuj spis questów w README",
+      markdown,
+      sha,
+    );
+  } catch {
+    return false;
+  }
 }
