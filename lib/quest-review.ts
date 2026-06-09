@@ -1,10 +1,11 @@
-// Zbieranie materiału z repo do oceny questa (Etap B, część 1).
+// Zbieranie materiału do oceny questa (Etap B, część 1) — model repo-kontenera.
 // UWAGA: tylko po stronie serwera — używa tokenu GitHub.
 //
-// Zasada: QUEST.md to stan startowy (pierwszy commit, instrukcja systemu).
-// Wkładem użytkownika jest WSZYSTKO poza QUEST.md. Odfiltrowujemy produkty
-// budowania, zależności, lockfile'y, binaria i pliki >100KB, bo to nie jest
-// praca użytkownika i tylko zaśmieciłoby kontekst modelu.
+// Quest to PODFOLDER w repo-kontenerze, więc oceniamy WYŁĄCZNIE zawartość tego
+// jednego folderu (nie całego repo). Zasada: {folder}/QUEST.md to stan startowy
+// (instrukcja systemu). Wkładem użytkownika jest WSZYSTKO poza QUEST.md wewnątrz
+// folderu. Odfiltrowujemy produkty budowania, zależności, lockfile'y, binaria i
+// pliki >100KB, bo to nie jest praca użytkownika i tylko zaśmieciłoby kontekst modelu.
 
 import {
   fetchRepoMeta,
@@ -80,27 +81,38 @@ export type RepoMaterial =
   | { ok: true; hasUserWork: boolean; material: string }
   | { ok: false; error: string };
 
-// Pobiera i składa materiał do oceny. hasUserWork=false oznacza repo z samym
-// QUEST.md (lub samymi śmieciami) — wtedy nie ma sensu wołać modelu.
-export async function collectRepoMaterial(
+// Pobiera i składa materiał do oceny FOLDERU questa w repo-kontenerze.
+// hasUserWork=false oznacza folder z samym QUEST.md (lub samymi śmieciami) —
+// wtedy nie ma sensu wołać modelu (od razu werdykt niezaliczony).
+export async function collectFolderMaterial(
   accessToken: string,
   owner: string,
   repo: string,
+  folderName: string,
 ): Promise<RepoMaterial> {
   const meta = await fetchRepoMeta(accessToken, owner, repo);
-  if (!meta) return { ok: false, error: "Nie udało się odczytać repozytorium z GitHuba." };
+  if (!meta) return { ok: false, error: "Nie udało się odczytać repo-kontenera z GitHuba." };
 
   const tree = await fetchRepoTree(accessToken, owner, repo, meta.defaultBranch);
-  if (!tree) return { ok: false, error: "Nie udało się pobrać drzewa plików repozytorium." };
+  if (!tree) return { ok: false, error: "Nie udało się pobrać drzewa plików repo-kontenera." };
 
-  const questEntry = tree.find((e) => e.path === "QUEST.md");
-  const readmeEntry = tree.find((e) => e.path.toLowerCase() === "readme.md");
+  // Zawężamy do plików WYŁĄCZNIE z folderu tego questa.
+  const prefix = `${folderName}/`;
+  const inFolder = tree.filter((e) => e.path.startsWith(prefix));
+  // Ścieżka względna w folderze — do filtrów śmieci i czytelnego wyświetlania.
+  const rel = (p: string) => p.slice(prefix.length);
 
-  // Wkład użytkownika = wszystko poza QUEST.md, bez śmieci/binariów/za dużych.
-  const meaningful: RepoTreeEntry[] = tree.filter(
+  const questPath = `${prefix}QUEST.md`;
+  const questEntry = inFolder.find((e) => e.path === questPath);
+  const readmeEntry = inFolder.find(
+    (e) => rel(e.path).toLowerCase() === "readme.md",
+  );
+
+  // Wkład użytkownika = wszystko w folderze poza QUEST.md, bez śmieci/binariów/za dużych.
+  const meaningful: RepoTreeEntry[] = inFolder.filter(
     (e) =>
-      e.path !== "QUEST.md" &&
-      !isJunk(e.path) &&
+      e.path !== questPath &&
+      !isJunk(rel(e.path)) &&
       !isBinary(e.path) &&
       e.size <= MAX_FILE_BYTES,
   );
@@ -138,14 +150,15 @@ export async function collectRepoMaterial(
       truncated = true;
     }
     budget -= slice.length;
-    parts.push(`--- ${f.path} ---\n${slice}${truncated ? "\n…(plik skrócony)" : ""}`);
+    parts.push(`--- ${rel(f.path)} ---\n${slice}${truncated ? "\n…(plik skrócony)" : ""}`);
   }
 
-  const treeList = meaningful.map((e) => `- ${e.path} (${e.size} B)`).join("\n");
+  const treeList = meaningful.map((e) => `- ${rel(e.path)} (${e.size} B)`).join("\n");
 
   const material = [
-    "=== Metadane repozytorium ===",
-    `Repozytorium publiczne: ${meta.isPrivate ? "nie" : "tak"}`,
+    "=== Kontekst ===",
+    `Folder questa: ${folderName} (w repo-kontenerze, publiczne: ${meta.isPrivate ? "nie" : "tak"})`,
+    "Oceniaj WYŁĄCZNIE zawartość tego folderu.",
     "",
     "=== QUEST.md (instrukcja systemu — STAN STARTOWY, NIE jest pracą użytkownika) ===",
     questMd?.trim() || "(brak pliku QUEST.md)",
@@ -153,7 +166,7 @@ export async function collectRepoMaterial(
     "=== README.md (praca użytkownika) ===",
     readme?.trim() || "(brak pliku README.md)",
     "",
-    "=== Drzewo plików (po odfiltrowaniu śmieci) ===",
+    "=== Pliki w folderze (po odfiltrowaniu śmieci) ===",
     treeList || "(brak)",
     "",
     "=== Treść plików (praca użytkownika) ===",

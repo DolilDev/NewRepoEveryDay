@@ -6,7 +6,8 @@ import { NextResponse } from "next/server";
 import { getServerAuth } from "@/lib/auth-token";
 import { prisma } from "@/lib/prisma";
 import { cetDayStart } from "@/lib/date";
-import { collectRepoMaterial } from "@/lib/quest-review";
+import { collectFolderMaterial } from "@/lib/quest-review";
+import { CONTAINER_REPO } from "@/lib/container";
 import { evaluateQuest } from "@/lib/openai";
 
 export const runtime = "nodejs";
@@ -37,18 +38,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ passed: true, alreadyCompleted: true });
     }
 
-    // CZĘŚĆ 1: materiał z repo (QUEST.md = stan startowy, reszta = praca usera).
-    const collected = await collectRepoMaterial(accessToken, login, quest.repoName);
+    // Quest musi mieć przypisany folder (model repo-kontenera). Stary format bez
+    // folderu nie ma czego oceniać — po wyczyszczeniu danych takich już nie ma.
+    if (!quest.folderName) {
+      return NextResponse.json(
+        { error: "Ten quest nie ma przypisanego folderu. Wygeneruj nowy quest." },
+        { status: 400 },
+      );
+    }
+
+    // CZĘŚĆ 1: materiał TYLKO z folderu questa w repo-kontenerze
+    // (QUEST.md = stan startowy, reszta plików w folderze = praca usera).
+    const collected = await collectFolderMaterial(
+      accessToken,
+      login,
+      CONTAINER_REPO,
+      quest.folderName,
+    );
     if (!collected.ok) {
       return NextResponse.json({ error: collected.error }, { status: 502 });
     }
 
-    // Repo z samym QUEST.md → werdykt niezaliczony BEZ wołania OpenAI.
+    // Folder z samym QUEST.md → werdykt niezaliczony BEZ wołania OpenAI.
     if (!collected.hasUserWork) {
       return NextResponse.json({
         passed: false,
-        missing: ["Nie dodano żadnej pracy — repozytorium zawiera tylko QUEST.md."],
-        reasoning: "W repozytorium nie ma jeszcze żadnego wkładu użytkownika.",
+        missing: ["Nie dodano żadnej pracy — folder questa zawiera tylko QUEST.md."],
+        reasoning: "W folderze questa nie ma jeszcze żadnego wkładu użytkownika.",
       });
     }
 
@@ -87,12 +103,13 @@ export async function POST(req: Request) {
       });
 
       // 2) Wpis w dzienniku ukończeń (źródło heatmapy i streaka).
+      // repoUrl wskazuje teraz folder questa w repo-kontenerze.
       await tx.completion.create({
         data: {
           userId: quest.userId,
           questId: quest.id,
           date: today,
-          repoUrl: quest.repoUrl,
+          repoUrl: quest.folderUrl,
           descriptionOfWork: verdict.descriptionOfWork || null,
         },
       });
