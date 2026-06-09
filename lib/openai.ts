@@ -225,8 +225,17 @@ ${criteria}
 
 // --- Ocena questa (Etap B, część 2) ----------------------------------------
 
+// Ocena POJEDYNCZEGO kryterium wraz z dowodem. Model ocenia każde kryterium
+// osobno — to stabilizuje werdykt (model nie decyduje o całości w jednym kroku).
+export type CriterionCheck = {
+  criterion: string; // treść kryterium
+  met: boolean; // czy spełnione
+  evidence: string; // konkretny plik + fragment dowodzący (lub czego brakuje)
+};
+
 export type QuestVerdict = {
   passed: boolean;
+  perCriterion: CriterionCheck[];
   missing: string[];
   descriptionOfWork: string;
   reasoning: string;
@@ -234,22 +243,36 @@ export type QuestVerdict = {
 
 const EVAL_SYSTEM_PROMPT = [
   "Jesteś rygorystycznym recenzentem zadań programistycznych w aplikacji NERD - NewEveryRepoDay.",
-  "Oceniasz, czy użytkownik wykonał dzisiejszy quest. Werdykt jest BINARNY:",
-  "zaliczone (100/100) TYLKO gdy spełnione są WSZYSTKIE kryteria; inaczej niezaliczone.",
+  "Oceniasz, czy użytkownik wykonał dzisiejszy quest. Oceniaj KAŻDE kryterium OSOBNO —",
+  "NIE podejmuj jednej decyzji o całości naraz. Dla KAŻDEGO kryterium ustal met (boolean)",
+  "ORAZ evidence:",
+  "- przy met=true: wskaż KONKRETNY plik i fragment kodu/treści, który spełnia to kryterium,",
+  "- przy met=false: napisz DOKŁADNIE, czego brakuje, by kryterium było spełnione.",
+  "Zanim oznaczysz kryterium jako niespełnione, przejrzyj WSZYSTKIE pliki w materiale, łącznie",
+  "z podfolderami (src/, tests/, web/). Nie zgaduj — opieraj się tylko na tym, co faktycznie",
+  "widzisz w treści plików.",
   "WAŻNE: plik QUEST.md to instrukcja systemu (stan startowy repozytorium) — NIE jest",
   "pracą użytkownika i nie liczy się jako wkład. Oceniasz WYŁĄCZNIE pozostałą zawartość",
   "repozytorium (kod, README i inne pliki) jako pracę użytkownika.",
   "Dodatkowe stałe kryterium: repozytorium MUSI zawierać plik README.md napisany po ANGIELSKU.",
-  "Bądź konkretny — jeśli czegoś brakuje, napisz dokładnie czego.",
+  "NIE zwracaj pola passed — finalny werdykt policzy aplikacja z Twoich ocen per-kryterium.",
   "Pola tekstowe wypełniaj PO POLSKU.",
   "Zwróć WYŁĄCZNIE obiekt JSON (bez markdown, bez ```), o dokładnie tych polach:",
-  '{ "passed": boolean, "missing": string[], "descriptionOfWork": string, "reasoning": string }',
-  "missing: lista konkretnych braków (pusta tablica, gdy passed=true).",
+  '{ "perCriterion": [{ "criterion": string, "met": boolean, "evidence": string }], "descriptionOfWork": string, "reasoning": string }',
+  "perCriterion: po jednym wpisie dla KAŻDEGO wymienionego kryterium, w tej samej kolejności.",
   "descriptionOfWork: jedno zdanie opisujące, co użytkownik faktycznie stworzył.",
-  "reasoning: krótkie uzasadnienie werdyktu.",
+  "reasoning: krótkie, całościowe uzasadnienie (które kryteria przeszły, a które nie).",
 ].join("\n");
 
-// Bezpieczny parser werdyktu — przy błędnym JSON rzuca czytelny błąd.
+// Skraca dowód do krótkiego dopisku przy braku — nie zalewamy listy braków całym evidence.
+function shortEvidence(evidence: string): string {
+  const e = evidence.trim();
+  if (e.length <= 160) return e;
+  return `${e.slice(0, 157)}…`;
+}
+
+// Bezpieczny parser werdyktu. Model ocenia każde kryterium osobno; finalny werdykt
+// (passed) liczymy DETERMINISTYCZNIE w kodzie z ocen per-kryterium.
 function parseVerdict(content: string): QuestVerdict {
   let obj: Record<string, unknown>;
   try {
@@ -257,13 +280,43 @@ function parseVerdict(content: string): QuestVerdict {
   } catch {
     throw new Error("Model zwrócił niepoprawny JSON oceny.");
   }
-  const missing = Array.isArray(obj.missing)
-    ? obj.missing
-        .filter((m): m is string => typeof m === "string" && m.trim().length > 0)
-        .map((m) => m.trim())
+
+  // perCriterion: tablica obiektów { criterion, met, evidence } — odfiltruj niepoprawne wpisy.
+  const perCriterion: CriterionCheck[] = Array.isArray(obj.perCriterion)
+    ? obj.perCriterion
+        .filter((c): c is Record<string, unknown> => !!c && typeof c === "object")
+        .filter(
+          (c) =>
+            typeof c.criterion === "string" &&
+            typeof c.met === "boolean" &&
+            typeof c.evidence === "string",
+        )
+        .map((c) => ({
+          criterion: (c.criterion as string).trim(),
+          met: c.met as boolean,
+          evidence: (c.evidence as string).trim(),
+        }))
+        .filter((c) => c.criterion.length > 0)
     : [];
+
+  if (perCriterion.length === 0) {
+    throw new Error("Model nie zwrócił ocen per-kryterium (perCriterion).");
+  }
+
+  // Werdykt DETERMINISTYCZNY: zaliczone tylko gdy KAŻDE kryterium jest spełnione.
+  const passed = perCriterion.length > 0 && perCriterion.every((c) => c.met);
+
+  // missing budujemy automatycznie z niespełnionych kryteriów (treść + skrót dowodu).
+  const missing = perCriterion
+    .filter((c) => !c.met)
+    .map((c) => {
+      const ev = shortEvidence(c.evidence);
+      return ev ? `${c.criterion} — ${ev}` : c.criterion;
+    });
+
   return {
-    passed: obj.passed === true,
+    passed,
+    perCriterion,
     missing,
     descriptionOfWork:
       typeof obj.descriptionOfWork === "string" ? obj.descriptionOfWork.trim() : "",
@@ -284,6 +337,8 @@ export async function evaluateQuest(
   const criteriaList = quest.criteria
     .map((c, i) => `${i + 1}. ${c}`)
     .join("\n");
+  // Stałe kryterium README dostaje numer kolejny po kryteriach questa.
+  const readmeIndex = quest.criteria.length + 1;
 
   const content = await callOpenAI(
     [
@@ -295,9 +350,11 @@ export async function evaluateQuest(
           `Tytuł: ${quest.title}\n\n` +
           `Instrukcja:\n${quest.instructions}\n\n` +
           `Część otwarta (dodatkowy wkład od siebie):\n${quest.openPart || "—"}\n\n` +
-          `Kryteria zaliczenia (WSZYSTKIE muszą być spełnione):\n` +
+          `Kryteria zaliczenia — oceń KAŻDE osobno:\n` +
           `${criteriaList || "(brak)"}\n` +
-          `(plus stałe kryterium: README.md napisany po angielsku)\n\n` +
+          `${readmeIndex}. README.md napisany po angielsku (stałe kryterium)\n\n` +
+          `Zwróć w perCriterion po JEDNYM wpisie dla KAŻDEGO z powyższych kryteriów ` +
+          `(w tej samej kolejności, łącznie z kryterium README), każdy z met i evidence.\n\n` +
           `=== MATERIAŁ Z REPOZYTORIUM ===\n${material}`,
       },
     ],
