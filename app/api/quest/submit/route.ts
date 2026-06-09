@@ -83,11 +83,13 @@ export async function POST(req: Request) {
     );
 
     // CZĘŚĆ 4 (odrzucenie): quest ZOSTAJE PENDING — można poprawić i zgłosić ponownie.
+    // perCriterion dorzucamy, by front mógł pokazać szczegóły per-kryterium z dowodem.
     if (!verdict.passed) {
       return NextResponse.json({
         passed: false,
         missing: verdict.missing,
         reasoning: verdict.reasoning,
+        perCriterion: verdict.perCriterion,
       });
     }
 
