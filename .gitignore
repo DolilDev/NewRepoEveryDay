@@ -23,6 +23,8 @@ yarn-error.log*
 .env
 .env*
 .env.local
+# ...ale szablon bez sekretów trzymamy w repo
+!.env.example
 
 # typescript
 *.tsbuildinfo
