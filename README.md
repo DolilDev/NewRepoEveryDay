@@ -1,1 +1,1 @@
-## https://newrepoeveryday.vercel.app/
+## (WebApp)[https://newrepoeveryday.vercel.app/]
