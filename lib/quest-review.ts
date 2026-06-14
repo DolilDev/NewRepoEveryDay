@@ -13,6 +13,7 @@ import {
   fetchBlobText,
   type RepoTreeEntry,
 } from "@/lib/github";
+import { baseName, ext } from "@/lib/path";
 
 const MAX_FILE_BYTES = 100 * 1024; // pomijamy pojedyncze pliki >100KB
 const CODE_BUDGET = 60_000; // łączny limit znaków treści plików z kodem
@@ -51,16 +52,6 @@ const CODE_EXT = new Set([
   "sh", "bash", "ps1", "sql", "html", "css", "scss", "sass", "less",
   "vue", "svelte", "astro",
 ]);
-
-function baseName(path: string): string {
-  return path.split("/").pop() ?? path;
-}
-
-function ext(path: string): string {
-  const b = baseName(path);
-  const i = b.lastIndexOf(".");
-  return i >= 0 ? b.slice(i + 1).toLowerCase() : "";
-}
 
 function isJunk(path: string): boolean {
   const segs = path.toLowerCase().split("/");

@@ -3,11 +3,19 @@
 // się wziąć z listy repozytoriów — wyznaczamy go per-FOLDER z drzewa kontenera:
 // jeden strzał po drzewo plików, potem dominujące rozszerzenie kodu w folderze.
 // Gdy języka nie da się ustalić → brak wpisu (UI pomija kropkę).
-// UWAGA: tylko po stronie serwera (czyta token z ciasteczka). cache() dedupuje w żądaniu.
+// UWAGA: tylko po stronie serwera (czyta token z ciasteczka). Wynik (mapa
+// folder→język) zależy WYŁĄCZNIE od zawartości repo-kontenera danego logina, nie
+// od oglądającego — więc cache'ujemy go czasowo per login (unstable_cache), żeby
+// nie ciągnąć całego drzewa GitHuba przy każdym renderze profilu/dashboardu.
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { getRepo, fetchRepoTree } from "@/lib/github";
 import { getCookieAccessToken } from "@/lib/auth-token";
 import { CONTAINER_REPO } from "@/lib/container";
+import { ext } from "@/lib/path";
+
+// Jak długo (s) trzymać policzone języki folderów zanim odświeżymy z GitHuba.
+const REVALIDATE_SECONDS = 300;
 
 // Rozszerzenie pliku → nazwa języka (zgodna z mapą kolorów w language-colors.ts).
 const EXT_LANGUAGE: Record<string, string> = {
@@ -50,53 +58,63 @@ const EXT_LANGUAGE: Record<string, string> = {
   ipynb: "Jupyter Notebook",
 };
 
-function extOf(path: string): string {
-  const base = path.split("/").pop() ?? path;
-  const i = base.lastIndexOf(".");
-  return i >= 0 ? base.slice(i + 1).toLowerCase() : "";
+// Policz dominujący język każdego folderu z drzewa repo-kontenera. Token wpada
+// przez domknięcie (NIE jest częścią klucza cache — wynik od niego nie zależy);
+// kluczem jest login. Zwraca zwykły obiekt, bo unstable_cache serializuje wynik
+// (Map nie przetrwałaby serializacji).
+function loadFolderLanguages(token: string) {
+  return unstable_cache(
+    async (login: string): Promise<Record<string, string | null>> => {
+      const result: Record<string, string | null> = {};
+
+      const repo = await getRepo(token, login, CONTAINER_REPO);
+      if (!repo.ok) return result;
+
+      const tree = await fetchRepoTree(token, login, CONTAINER_REPO, repo.defaultBranch);
+      if (!tree) return result;
+
+      // Zlicz pliki kodu po języku, w obrębie pierwszego segmentu ścieżki (= folder questa).
+      const counts = new Map<string, Map<string, number>>();
+      for (const e of tree) {
+        const slash = e.path.indexOf("/");
+        if (slash <= 0) continue; // pliki w korzeniu (np. README kontenera) pomijamy
+        const folder = e.path.slice(0, slash);
+        const lang = EXT_LANGUAGE[ext(e.path)];
+        if (!lang) continue;
+        let m = counts.get(folder);
+        if (!m) {
+          m = new Map();
+          counts.set(folder, m);
+        }
+        m.set(lang, (m.get(lang) ?? 0) + 1);
+      }
+
+      // Dominujący język = najczęstsze rozszerzenie kodu w folderze.
+      for (const [folder, m] of counts) {
+        let best: string | null = null;
+        let bestN = 0;
+        for (const [lang, n] of m) {
+          if (n > bestN) {
+            best = lang;
+            bestN = n;
+          }
+        }
+        result[folder] = best;
+      }
+      return result;
+    },
+    ["folder-languages"],
+    { revalidate: REVALIDATE_SECONDS },
+  );
 }
 
+// cache() z Reacta dedupuje odczyt ciasteczka i budowę Mapy w obrębie jednego żądania.
 export const getFolderLanguages = cache(
   async (login: string): Promise<Map<string, string | null>> => {
-    const map = new Map<string, string | null>();
     // Pusty token = odczyt publiczny (kontener jest publiczny). Brak ciasteczka
     // też zadziała dla danych publicznych, tylko z niższym limitem zapytań.
     const token = (await getCookieAccessToken()) ?? "";
-
-    const repo = await getRepo(token, login, CONTAINER_REPO);
-    if (!repo.ok) return map;
-
-    const tree = await fetchRepoTree(token, login, CONTAINER_REPO, repo.defaultBranch);
-    if (!tree) return map;
-
-    // Zlicz pliki kodu po języku, w obrębie pierwszego segmentu ścieżki (= folder questa).
-    const counts = new Map<string, Map<string, number>>();
-    for (const e of tree) {
-      const slash = e.path.indexOf("/");
-      if (slash <= 0) continue; // pliki w korzeniu (np. README kontenera) pomijamy
-      const folder = e.path.slice(0, slash);
-      const lang = EXT_LANGUAGE[extOf(e.path)];
-      if (!lang) continue;
-      let m = counts.get(folder);
-      if (!m) {
-        m = new Map();
-        counts.set(folder, m);
-      }
-      m.set(lang, (m.get(lang) ?? 0) + 1);
-    }
-
-    // Dominujący język = najczęstsze rozszerzenie kodu w folderze.
-    for (const [folder, m] of counts) {
-      let best: string | null = null;
-      let bestN = 0;
-      for (const [lang, n] of m) {
-        if (n > bestN) {
-          best = lang;
-          bestN = n;
-        }
-      }
-      map.set(folder, best);
-    }
-    return map;
+    const obj = await loadFolderLanguages(token)(login);
+    return new Map(Object.entries(obj));
   },
 );
