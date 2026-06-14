@@ -2,16 +2,26 @@
 
 import { useEffect, useState } from "react";
 
-// Czas do najbliższej północy CET (UTC+1) — zgodnie z planem to globalna
-// strefa resetu questa dla wszystkich graczy.
+// Czas do najbliższej północy w strefie Europe/Warsaw — globalny reset questa.
+// Czytamy realny zegar ścienny w Warszawie przez Intl, więc DST (CET↔CEST) jest
+// obsłużony automatycznie (bez sztywnego offsetu UTC+1).
 function msUntilMidnightCET(): number {
   const now = new Date();
-  // Bieżący czas przeliczony na CET (UTC+1), niezależnie od strefy przeglądarki.
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60_000;
-  const cet = new Date(utcMs + 60 * 60_000);
-  const nextMidnight = new Date(cet);
-  nextMidnight.setHours(24, 0, 0, 0);
-  return nextMidnight.getTime() - cet.getTime();
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Warsaw",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const get = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value);
+  let h = get("hour");
+  if (h === 24) h = 0; // część środowisk zwraca "24" o północy
+  const elapsedMs =
+    (h * 3600 + get("minute") * 60 + get("second")) * 1000 +
+    now.getMilliseconds();
+  return 24 * 3600 * 1000 - elapsedMs;
 }
 
 function format(ms: number): string {
