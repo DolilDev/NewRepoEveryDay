@@ -16,8 +16,13 @@ export type ServerAuth = {
 
 export async function getServerAuth(req: Request): Promise<ServerAuth | null> {
   // W produkcji (https) NextAuth używa nazwy ciasteczka z prefiksem __Secure-,
-  // więc dobieramy ją na podstawie NEXTAUTH_URL; salt = nazwa ciasteczka.
-  const secureCookie = (process.env.NEXTAUTH_URL ?? "").startsWith("https://");
+  // a salt do odszyfrowania JWT zależy od tej nazwy. NEXTAUTH_URL bywa nieustawiony
+  // na Vercel (host wykrywa trustHost), więc gdy go brak — produkcję rozpoznajemy po
+  // NODE_ENV (na Vercel prod/preview = "production"). Inaczej getToken szukałby
+  // ciasteczka bez prefiksu i sesja serwerowa byłaby pusta mimo zalogowania.
+  const secureCookie =
+    process.env.NEXTAUTH_URL?.startsWith("https://") ??
+    process.env.NODE_ENV === "production";
 
   const token = await getToken({
     req,
@@ -47,7 +52,9 @@ export async function getServerAuth(req: Request): Promise<ServerAuth | null> {
 // zalogowany. Token NIE trafia do przeglądarki — służy tylko do serwerowych
 // zapytań do GitHub API (np. dociągnięcie języków cudzego, publicznego repo).
 export const getCookieAccessToken = cache(async (): Promise<string | null> => {
-  const secureCookie = (process.env.NEXTAUTH_URL ?? "").startsWith("https://");
+  const secureCookie =
+    process.env.NEXTAUTH_URL?.startsWith("https://") ??
+    process.env.NODE_ENV === "production";
   const cookieHeader = cookies()
     .getAll()
     .map((c) => `${c.name}=${c.value}`)
