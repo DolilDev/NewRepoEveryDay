@@ -12,6 +12,9 @@ import { evaluateQuest } from "@/lib/openai";
 
 export const runtime = "nodejs";
 
+// Minimalny odstęp między kolejnymi ocenami tego samego questa.
+const EVAL_COOLDOWN_MS = 30_000;
+
 export async function POST(req: Request) {
   const auth = await getServerAuth(req);
   if (!auth?.login) {
@@ -46,6 +49,24 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
+
+    // Rate-limit per quest: każda ocena ciągnie drzewo repo z GitHuba i woła OpenAI,
+    // więc blokujemy spam (cooldown w bazie — odporne na serverless/cold-start).
+    // Znacznik bijemy PRZED kosztownymi operacjami, by liczyła się każda próba.
+    if (quest.lastEvaluatedAt) {
+      const elapsed = Date.now() - quest.lastEvaluatedAt.getTime();
+      if (elapsed < EVAL_COOLDOWN_MS) {
+        const wait = Math.ceil((EVAL_COOLDOWN_MS - elapsed) / 1000);
+        return NextResponse.json(
+          { error: `Za szybko — odczekaj ${wait} s przed kolejną oceną.` },
+          { status: 429 },
+        );
+      }
+    }
+    await prisma.quest.update({
+      where: { id: quest.id },
+      data: { lastEvaluatedAt: new Date() },
+    });
 
     // CZĘŚĆ 1: materiał TYLKO z folderu questa w repo-kontenerze
     // (QUEST.md = stan startowy, reszta plików w folderze = praca usera).
@@ -180,9 +201,11 @@ export async function POST(req: Request) {
       longestStreak: summary.longestStreak,
     });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Nieznany błąd serwera.";
+    // Pełny błąd tylko do logów serwera — klientowi ogólny komunikat (bez wycieku
+    // szczegółów OpenAI / GitHub / Prisma).
+    console.error("[quest/submit] Ocena nie powiodła się:", e);
     return NextResponse.json(
-      { error: `Ocena nie powiodła się: ${message}` },
+      { error: "Ocena nie powiodła się. Spróbuj ponownie za chwilę." },
       { status: 500 },
     );
   }

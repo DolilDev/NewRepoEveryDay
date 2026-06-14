@@ -59,6 +59,7 @@ model Quest {
   folderUrl    String?     @map("folder_url") // URL do folderu questa w repo-kontenerze
   questMdUrl   String?     @map("quest_md_url") // URL do QUEST.md w folderze
   createdAt    DateTime    @default(now()) @map("created_at")
+  lastEvaluatedAt DateTime? @map("last_evaluated_at") // ostatnia próba oceny — cooldown anty-spam
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   completions Completion[]
