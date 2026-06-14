@@ -144,9 +144,10 @@ export async function POST(req: Request) {
       fileUploaded,
     });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Nieznany błąd serwera.";
+    // Pełny błąd tylko do logów serwera — klientowi ogólny komunikat.
+    console.error("[quest/generate] Generowanie nie powiodło się:", e);
     return NextResponse.json(
-      { error: `Generowanie nie powiodło się: ${message}` },
+      { error: "Generowanie nie powiodło się. Spróbuj ponownie za chwilę." },
       { status: 500 },
     );
   }
