@@ -7,16 +7,12 @@ import Providers from "@/components/Providers";
 export const metadata: Metadata = {
   title: "NERD - NewEveryRepoDay",
   description:
-    "NERD - NewEveryRepoDay: codzienne questy dla programistów, które wypychają Cię poza znane technologie.",
+    "NERD - NewEveryRepoDay: daily quests for developers that push you beyond familiar technologies.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pl">
+    <html lang="en">
       <body className="flex min-h-screen flex-col bg-gh-bg-deep font-sans text-gh-text antialiased">
         <Providers>
           <Header />

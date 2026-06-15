@@ -1,11 +1,11 @@
-// Lewa kolumna profilu — stała przy obu zakładkach (Overview / Repositories).
-// Czysto prezentacyjna: dane (profil + osiągnięcia) dostaje z layoutu profilu,
-// żeby ten sam komponent działał dla własnego i CUDZEGO profilu.
+// Left profile column — fixed across both tabs (Overview / Repositories).
+// Purely presentational: it receives data (profile + achievements) from the profile layout,
+// so the same component works for your own profile and SOMEONE ELSE'S.
 import Avatar from "./Avatar";
-import { formatPlDate, formatPlMonthYear } from "@/lib/date";
+import { formatDate, formatMonthYear } from "@/lib/date";
 import type { ProfileData } from "@/lib/profile";
 
-// Osiągnięcie gotowe do pokazania (zmapowane z bazy w layoutcie profilu).
+// Achievement ready to display (mapped from the database in the profile layout).
 export type SidebarAchievement = {
   id: string;
   unlockedDate: string; // YYYY-MM-DD
@@ -40,30 +40,28 @@ export default function ProfileSidebar({
   const image = profile.avatarUrl ?? undefined;
   const profileUrl = `https://github.com/${login}`;
 
-  // Bio z GitHuba (może być puste → nie renderujemy elementu).
+  // Bio from GitHub (may be empty → we don't render the element).
   const bio = profile.bio;
-  // Liczniki społeczności — tylko gdy mamy realne dane z GitHuba.
+  // Community counters — only when we have real data from GitHub.
   const followers =
-    profile.followers != null ? profile.followers.toLocaleString("pl-PL") : null;
+    profile.followers != null ? profile.followers.toLocaleString("en-US") : null;
   const following =
-    profile.following != null ? profile.following.toLocaleString("pl-PL") : null;
+    profile.following != null ? profile.following.toLocaleString("en-US") : null;
 
-  // Data dołączenia do NERD (nasza baza). Osoba niezarejestrowana (istnieje na
-  // GitHubie, ale nie gra u nas) → wyraźne „Nie dołączono" zamiast daty.
+  // Date of joining NERD (our database). An unregistered person (exists on
+  // GitHub, but doesn't play with us) → a clear "Not joined" instead of a date.
   const joinedIso = profile.joinedAt?.toISOString() ?? null;
   const joinedLabel =
-    profile.registered && joinedIso && formatPlMonthYear(joinedIso)
-      ? `Dołączył(a) ${formatPlMonthYear(joinedIso)}`
-      : "Nie dołączono";
+    profile.registered && joinedIso && formatMonthYear(joinedIso)
+      ? `Joined ${formatMonthYear(joinedIso)}`
+      : "Not joined";
 
   return (
     <aside className="w-full shrink-0 md:w-[296px]">
       <div className="flex flex-col items-center text-center md:items-start md:text-left">
         <Avatar name={name} login={login} image={image} size={260} />
 
-        <h1 className="mt-4 text-2xl font-bold leading-tight text-gh-text">
-          {name}
-        </h1>
+        <h1 className="mt-4 text-2xl font-bold leading-tight text-gh-text">{name}</h1>
         <a
           href={profileUrl}
           target="_blank"
@@ -73,37 +71,33 @@ export default function ProfileSidebar({
           {login}
         </a>
 
-        {/* Bio renderujemy tylko, gdy faktycznie istnieje — brak opisu = brak elementu. */}
+        {/* We render the bio only when it actually exists — no description = no element. */}
         {bio && <p className="mt-4 text-sm text-gh-text">{bio}</p>}
 
-        {/* Liczniki społeczności tylko, gdy mamy realne dane z GitHuba. */}
+        {/* Community counters only when we have real data from GitHub. */}
         {followers && following && (
           <div className="mt-4 flex items-center gap-2 text-sm text-gh-muted">
             <PeopleIcon />
             <span>
-              <span className="font-semibold text-gh-text">{followers}</span>{" "}
-              followers ·{" "}
-              <span className="font-semibold text-gh-text">{following}</span>{" "}
-              following
+              <span className="font-semibold text-gh-text">{followers}</span> followers ·{" "}
+              <span className="font-semibold text-gh-text">{following}</span> following
             </span>
           </div>
         )}
 
-        {/* Data dołączenia do NERD albo „Nie dołączono" dla niezarejestrowanych. */}
+        {/* Date of joining NERD or "Not joined" for unregistered users. */}
         <div className="mt-2 flex items-center gap-2 text-sm text-gh-muted">
           <CalendarIcon />
           <span>{joinedLabel}</span>
         </div>
       </div>
 
-      {/* Osiągnięcia — pokazujemy WYŁĄCZNIE zdobyte; brak → sekcja znika. */}
+      {/* Achievements — we show ONLY earned ones; none → the section disappears. */}
       {achievements.length > 0 && (
         <section className="mt-6 w-full border-t border-gh-border pt-6">
           <h2 className="mb-4 text-sm font-semibold text-gh-text">
-            Osiągnięcia
-            <span className="ml-2 font-normal text-gh-muted">
-              {achievements.length}
-            </span>
+            Achievements
+            <span className="ml-2 font-normal text-gh-muted">{achievements.length}</span>
           </h2>
           <div className="flex flex-wrap gap-2">
             {achievements.map((a) => (
@@ -111,7 +105,7 @@ export default function ProfileSidebar({
                 key={a.id}
                 title={
                   a.unlockedDate
-                    ? `${a.name} — odblokowano ${formatPlDate(a.unlockedDate)}`
+                    ? `${a.name} — unlocked ${formatDate(a.unlockedDate)}`
                     : a.name
                 }
                 className="flex h-12 w-12 items-center justify-center rounded-full border border-gh-border bg-gh-surface text-xl"

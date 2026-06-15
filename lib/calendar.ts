@@ -1,7 +1,7 @@
-// Budowanie siatki kalendarza ukończeń (heatmapa binarna) z tabeli completions.
-// WAŻNE: kalendarz jest BINARNY — dzień ukończony albo nie. Tylko jeden odcień
-// zieleni (#39d353), bez stopniowania. Pusty kalendarz (brak ukończeń) to
-// poprawny stan startowy, nie błąd: wszystkie pola puste, licznik 0.
+// Building the completions calendar grid (binary heatmap) from the completions table.
+// IMPORTANT: the calendar is BINARY — a day is either completed or not. Only one shade
+// of green (#39d353), with no gradation. An empty calendar (no completions) is a
+// valid starting state, not an error: all cells empty, count 0.
 import { cetDayStart } from "@/lib/date";
 
 export interface QuestDay {
@@ -13,7 +13,7 @@ export interface QuestDay {
 export const QUEST_DONE_COLOR = "var(--color-calendar-done)";
 export const QUEST_EMPTY_COLOR = "var(--color-calendar-empty)";
 
-// Wpis ukończenia potrzebny do kalendarza — data (kanoniczny dzień CET) i opis.
+// A completion entry needed for the calendar — date (canonical CET day) and description.
 export interface CompletionInput {
   date: Date;
   descriptionOfWork: string | null;
@@ -23,20 +23,20 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-// Buduje siatkę Pon–Nd za ostatni rok (do dziś wg CET) na podstawie ukończeń.
-// Zwraca dni do wyrenderowania oraz liczbę ukończeń w tym zakresie.
+// Builds a Mon–Sun grid for the last year (up to today in CET) based on completions.
+// Returns the days to render and the number of completions in that range.
 export function buildQuestCalendar(
   completions: CompletionInput[],
   now: Date = new Date(),
 ): { days: QuestDay[]; completedCount: number } {
-  // Mapa: dzień (ISO) → opis pracy. completion.date to północ UTC dnia CET,
-  // więc isoDate daje właściwy klucz dnia (spójnie z cetDayStart).
+  // Map: day (ISO) → work description. completion.date is UTC midnight of the CET day,
+  // so isoDate yields the correct day key (consistent with cetDayStart).
   const byDay = new Map<string, string | null>();
   for (const c of completions) {
     byDay.set(isoDate(c.date), c.descriptionOfWork);
   }
 
-  // Start ~rok wstecz, wyrównany do poniedziałku (wiersze Pon–Nd).
+  // Start ~one year back, aligned to Monday (Mon–Sun rows).
   const today = cetDayStart(now);
   const start = new Date(today);
   start.setUTCDate(start.getUTCDate() - 364);

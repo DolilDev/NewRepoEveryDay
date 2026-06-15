@@ -1,13 +1,13 @@
-// Serwerowe generowanie questa przez OpenAI (gpt-4o-mini).
-// UWAGA: OPENAI_API_KEY czytany WYŁĄCZNIE tutaj, po stronie serwera. Klucz nigdy
-// nie jest zwracany ani wysyłany do przeglądarki.
+// Server-side quest generation via OpenAI (gpt-4o-mini).
+// NOTE: OPENAI_API_KEY is read ONLY here, server-side. The key is never returned
+// or sent to the browser.
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const MODEL = "gpt-4o-mini";
 
 export type QuestSpec = {
   title: string;
-  folderName: string; // nazwa PODFOLDERU w repo-kontenerze (np. NERD-rust-wasm)
+  folderName: string; // name of the SUBFOLDER in the container repo (e.g. NERD-rust-wasm)
   why: string;
   instructions: string;
   openPart: string;
@@ -16,13 +16,10 @@ export type QuestSpec = {
 
 type ChatMessage = { role: "system" | "user"; content: string };
 
-// Pojedyncze wywołanie modelu z wymuszonym formatem JSON. Zwraca surowy string.
-async function callOpenAI(
-  messages: ChatMessage[],
-  temperature = 0.8,
-): Promise<string> {
+// A single model call with an enforced JSON format. Returns the raw string.
+async function callOpenAI(messages: ChatMessage[], temperature = 0.8): Promise<string> {
   const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error("Brak OPENAI_API_KEY w środowisku serwera.");
+  if (!key) throw new Error("Missing OPENAI_API_KEY in the server environment.");
 
   const res = await fetch(OPENAI_URL, {
     method: "POST",
@@ -47,36 +44,36 @@ async function callOpenAI(
   const data = await res.json();
   const content = data?.choices?.[0]?.message?.content;
   if (typeof content !== "string" || !content.trim()) {
-    throw new Error("OpenAI zwrócił pustą odpowiedź.");
+    throw new Error("OpenAI returned an empty response.");
   }
   return content;
 }
 
-// Sprowadza dowolny string do formatu nazwy PODFOLDERU questa: NERD-<slug>.
-// (Model repo-kontenera: quest to folder, nie osobne repo.)
+// Reduces any string to the quest SUBFOLDER name format: NERD-<slug>.
+// (Container repo model: a quest is a folder, not a separate repo.)
 export function normalizeFolderName(raw: string): string {
   let slug = (raw ?? "")
     .toLowerCase()
     .normalize("NFKD")
-    // NFKD rozkłada znaki diakrytyczne; filtr poniżej usuwa je wraz z resztą.
+    // NFKD decomposes diacritics; the filter below removes them along with the rest.
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  // Zdejmij ewentualny prefiks (z modelu lub starego formatu), dodamy własny.
+  // Strip any existing prefix (from the model or an old format); we add our own.
   slug = slug.replace(/^nerd-?/, "").replace(/^daily-quest-?/, "");
   if (!slug) slug = Math.random().toString(36).slice(2, 7);
 
   return `NERD-${slug}`.slice(0, 90).replace(/-+$/g, "");
 }
 
-// Bezpieczny parser odpowiedzi modelu — rzuca czytelny błąd przy braku pól.
+// Safe parser of the model's response — throws a readable error on missing fields.
 function parseQuestJson(content: string): QuestSpec {
   let obj: Record<string, unknown>;
   try {
     obj = JSON.parse(content);
   } catch {
-    throw new Error("Model zwrócił niepoprawny JSON.");
+    throw new Error("The model returned invalid JSON.");
   }
 
   const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
@@ -92,63 +89,65 @@ function parseQuestJson(content: string): QuestSpec {
   const folderName = normalizeFolderName(str(obj.folderName) || title);
 
   if (!title || !instructions || criteria.length === 0) {
-    throw new Error("Model zwrócił niekompletny quest (brak tytułu/instrukcji/kryteriów).");
+    throw new Error(
+      "The model returned an incomplete quest (missing title/instructions/criteria).",
+    );
   }
 
   return { title, folderName, why, instructions, openPart, criteria };
 }
 
 const QUEST_SYSTEM_PROMPT = [
-  "Jesteś wymagającym mentorem programistów w aplikacji NERD - NewEveryRepoDay.",
-  "Generujesz JEDNO ambitne, wielowarstwowe zadanie na dzień — projekt, który na",
-  "pierwszy rzut oka wygląda jak praca rozpisana na 1–2 tygodnie, ale zdolny",
-  "programista realnie zamknie go w jeden intensywny dzień.",
+  "You are a demanding programming mentor in the NERD - NewEveryRepoDay app.",
+  "You generate ONE ambitious, multi-layered task per day — a project that at",
+  "first glance looks like 1–2 weeks of work, but that a capable programmer can",
+  "realistically finish in one intense day.",
   "",
-  "Zasady trudności (BARDZO WAŻNE):",
-  "- Zadanie ma być WIELOWARSTWOWE: kilka powiązanych modułów/funkcji tworzących",
-  "  spójną całość, a NIE pojedyncze, proste ćwiczenie.",
-  "- Musi wymagać realnej ARCHITEKTURY: przemyślany podział na warstwy/moduły,",
-  "  obsługa błędów i przypadków brzegowych, sensowna struktura kodu, podstawowe testy.",
-  "- To NIE jest „hello world” ani zadanie do zrobienia jednym promptem do AI w kilka minut.",
-  "- Ma wypchnąć użytkownika poza jego DOTYCHCZASOWE języki, technologie i typy",
-  "  projektów (na podstawie profilu) — wybierz coś, czego jeszcze nie robił.",
-  "- UNIKAJ zależności z ciężkim setupem systemowym (np. GTK, Qt, sterowniki GPU/CUDA,",
-  "  silniki baz danych stawiane osobno), które blokują już na instalacji. Trudność ma",
-  "  leżeć w LOGICE i ARCHITEKTURZE, nie w walce ze środowiskiem. Preferuj bibliotekę",
-  "  standardową i lekkie zależności z menedżera pakietów danego języka.",
-  "- Projekt ma dać się uruchomić lokalnie bez egzotycznego sprzętu i płatnych kont.",
+  "Difficulty rules (VERY IMPORTANT):",
+  "- The task must be MULTI-LAYERED: several related modules/functions forming",
+  "  a coherent whole, and NOT a single, simple exercise.",
+  "- It must require real ARCHITECTURE: a deliberate split into layers/modules,",
+  "  error handling and edge cases, a sensible code structure, basic tests.",
+  '- It is NOT a "hello world" or a task you can do with one prompt to an AI in a few minutes.',
+  "- It should push the user beyond their EXISTING languages, technologies and project",
+  "  types (based on the profile) — pick something they have not done yet.",
+  "- AVOID dependencies with heavy system setup (e.g. GTK, Qt, GPU/CUDA drivers,",
+  "  database engines set up separately) that block you at installation. The difficulty",
+  "  should lie in the LOGIC and ARCHITECTURE, not in fighting the environment. Prefer the",
+  "  standard library and lightweight dependencies from the language's package manager.",
+  "- The project must be runnable locally without exotic hardware or paid accounts.",
   "",
-  "Odpowiadaj PO POLSKU.",
-  "Zwróć WYŁĄCZNIE obiekt JSON (bez markdown, bez ```), o dokładnie tych polach:",
+  "Respond in English.",
+  "Return ONLY a JSON object (no markdown, no ```), with exactly these fields:",
   '{ "title": string, "folderName": string, "why": string, "instructions": string, "openPart": string, "criteria": string[] }',
-  'folderName MUSI mieć format "NERD-<krótki-slug>": prefiks "NERD-", dalej tylko małe litery i myślniki (np. NERD-rust-wasm).',
-  "why: dlaczego akurat to zadanie i ten stack — powiązane z profilem i z tym, czego user NIE robił.",
-  "instructions: treściwy opis projektu z podziałem na moduły/etapy — co zbudować i jak ma być",
-  "  poukładane (warstwy, główne komponenty, obsługa błędów). Konkretnie, nie ogólnikowo.",
-  "openPart: ambitne rozszerzenie ponad minimum — opcjonalny dodatek dla chętnych.",
-  "criteria: 6–10 KONKRETNYCH, MIERZALNYCH kryteriów zaliczenia odzwierciedlających złożoność",
-  "  (np. konkretne moduły, obsłużone przypadki błędów, testy, działające polecenia/endpointy).",
+  'folderName MUST have the format "NERD-<short-slug>": the "NERD-" prefix, then only lowercase letters and hyphens (e.g. NERD-rust-wasm).',
+  "why: why this particular task and this stack — tied to the profile and to what the user has NOT done.",
+  "instructions: a substantive project description split into modules/stages — what to build and how it should",
+  "  be organized (layers, main components, error handling). Be specific, not vague.",
+  "openPart: an ambitious extension beyond the minimum — an optional add-on for the willing.",
+  "criteria: 6–10 CONCRETE, MEASURABLE completion criteria reflecting the complexity",
+  "  (e.g. specific modules, handled error cases, tests, working commands/endpoints).",
 ].join("\n");
 
-// Generuje pełny quest na podstawie tekstowego podsumowania profilu użytkownika.
+// Generates a full quest based on a text summary of the user's profile.
 export async function generateQuest(profileSummary: string): Promise<QuestSpec> {
   const content = await callOpenAI([
     { role: "system", content: QUEST_SYSTEM_PROMPT },
     {
       role: "user",
       content:
-        `Profil użytkownika (na podstawie jego publicznych repozytoriów):\n${profileSummary}\n\n` +
-        "Zaproponuj JEDEN ambitny, wielowarstwowy quest w technologii lub typie projektu, " +
-        "których ten użytkownik dotąd NIE używał. Ma wyglądać jak projekt na 1–2 tygodnie, " +
-        "ale być realny do skończenia w jeden intensywny dzień przez zdolnego programistę. " +
-        "Trudność ma wynikać z logiki i architektury (kilka modułów, obsługa błędów, struktura " +
-        "kodu, testy), a nie z mozolnego setupu — unikaj ciężkich zależności systemowych typu GTK.",
+        `User profile (based on their public repositories):\n${profileSummary}\n\n` +
+        "Propose ONE ambitious, multi-layered quest in a technology or project type " +
+        "this user has NOT used before. It should look like a 1–2 week project, " +
+        "but be realistically finishable in one intense day by a capable programmer. " +
+        "The difficulty should come from logic and architecture (several modules, error handling, code " +
+        "structure, tests), not from tedious setup — avoid heavy system dependencies like GTK.",
     },
   ]);
   return parseQuestJson(content);
 }
 
-// Gdy nazwa folderu questa jest zajęta — prosimy model o INNĄ nazwę (inny slug).
+// When the quest folder name is taken — we ask the model for a DIFFERENT name (a different slug).
 export async function generateFolderName(
   title: string,
   avoid: string[],
@@ -158,14 +157,14 @@ export async function generateFolderName(
       {
         role: "system",
         content:
-          'Zwróć WYŁĄCZNIE JSON: { "folderName": "NERD-<slug>" }. ' +
-          'Prefiks "NERD-", dalej tylko małe litery i myślniki, krótko i opisowo.',
+          'Return ONLY JSON: { "folderName": "NERD-<slug>" }. ' +
+          'The "NERD-" prefix, then only lowercase letters and hyphens, short and descriptive.',
       },
       {
         role: "user",
         content:
-          `Tytuł questa: "${title}". Zaproponuj NOWĄ, inną nazwę folderu. ` +
-          `Nie używaj żadnej z tych zajętych nazw: ${avoid.join(", ") || "(brak)"}.`,
+          `Quest title: "${title}". Propose a NEW, different folder name. ` +
+          `Do not use any of these taken names: ${avoid.join(", ") || "(none)"}.`,
       },
     ],
     1,
@@ -176,61 +175,62 @@ export async function generateFolderName(
     const obj = JSON.parse(content);
     if (typeof obj?.folderName === "string") candidate = obj.folderName;
   } catch {
-    // zignoruj — poniżej fallback
+    // ignore — fallback below
   }
 
   let name = normalizeFolderName(candidate || title);
-  // Gdy model uparcie zwraca zajętą nazwę — dokładamy losowy sufiks.
+  // When the model stubbornly returns a taken name — we append a random suffix.
   if (avoid.includes(name)) {
     name = normalizeFolderName(`${title}-${Math.random().toString(36).slice(2, 6)}`);
   }
   return name;
 }
 
-// Stała sekcja README — identyczna w każdym QUEST.md, dodawana w kodzie
-// (NIE generowana przez model).
-const README_SECTION = `## README (wymagane)
-W repozytorium utwórz plik \`README.md\` napisany **po angielsku**, opisujący projekt:
-co to jest, jak go uruchomić oraz czego użyto (języki, biblioteki, narzędzia).
-To wymóg obowiązkowy dla każdego questa.`;
+// A fixed README section — identical in every QUEST.md, added in code
+// (NOT generated by the model).
+const README_SECTION = `## README (required)
+In the repository, create a \`README.md\` file written **in English**, describing the project:
+what it is, how to run it, and what was used (languages, libraries, tools).
+This is a mandatory requirement for every quest.`;
 
-// Stałe kryterium dotyczące README — doklejane do listy niezależnie od modelu.
-const README_CRITERION = "Repozytorium zawiera plik README.md napisany po angielsku";
+// A fixed criterion about the README — appended to the list regardless of the model.
+const README_CRITERION = "The repository contains a README.md file written in English";
 
-// Buduje treść pliku QUEST.md z wygenerowanego questa (ładny markdown).
+// Builds the content of the QUEST.md file from the generated quest (nice markdown).
 export function buildQuestMarkdown(quest: QuestSpec): string {
-  // Stałe kryterium README dokładamy na sztywno, nie polegając na modelu.
+  // We add the fixed README criterion unconditionally, without relying on the model.
   const allCriteria = [...quest.criteria, README_CRITERION];
   const criteria = allCriteria.map((c) => `- [ ] ${c}`).join("\n");
   return `# ${quest.title}
 
-## Dlaczego to zadanie
+## Why this task
 ${quest.why || "—"}
 
-## Instrukcja
+## Instructions
 ${quest.instructions}
 
-## Dodaj coś od siebie
+## Add your own twist
 ${quest.openPart || "—"}
 
 ${README_SECTION}
 
-## Kryteria zaliczenia
+## Completion criteria
 ${criteria}
 
 ---
-*Wygenerowane automatycznie przez NERD - NewEveryRepoDay.*
+*Automatically generated by NERD - NewEveryRepoDay.*
 `;
 }
 
-// --- Ocena questa (Etap B, część 2) ----------------------------------------
+// --- Quest evaluation (Stage B, part 2) ------------------------------------
 
-// Ocena POJEDYNCZEGO kryterium wraz z dowodem. Model ocenia każde kryterium
-// osobno — to stabilizuje werdykt (model nie decyduje o całości w jednym kroku).
+// Evaluation of a SINGLE criterion together with evidence. The model evaluates each
+// criterion separately — this stabilizes the verdict (the model does not decide on
+// the whole thing in one step).
 export type CriterionCheck = {
-  criterion: string; // treść kryterium
-  met: boolean; // czy spełnione
-  evidence: string; // konkretny plik + fragment dowodzący (lub czego brakuje)
+  criterion: string; // the criterion text
+  met: boolean; // whether it is met
+  evidence: string; // the specific file + supporting fragment (or what is missing)
 };
 
 export type QuestVerdict = {
@@ -242,46 +242,46 @@ export type QuestVerdict = {
 };
 
 const EVAL_SYSTEM_PROMPT = [
-  "Jesteś rygorystycznym recenzentem zadań programistycznych w aplikacji NERD - NewEveryRepoDay.",
-  "Oceniasz, czy użytkownik wykonał dzisiejszy quest. Oceniaj KAŻDE kryterium OSOBNO —",
-  "NIE podejmuj jednej decyzji o całości naraz. Dla KAŻDEGO kryterium ustal met (boolean)",
-  "ORAZ evidence:",
-  "- przy met=true: wskaż KONKRETNY plik i fragment kodu/treści, który spełnia to kryterium,",
-  "- przy met=false: napisz DOKŁADNIE, czego brakuje, by kryterium było spełnione.",
-  "Zanim oznaczysz kryterium jako niespełnione, przejrzyj WSZYSTKIE pliki w materiale, łącznie",
-  "z podfolderami (src/, tests/, web/). Nie zgaduj — opieraj się tylko na tym, co faktycznie",
-  "widzisz w treści plików.",
-  "WAŻNE: plik QUEST.md to instrukcja systemu (stan startowy repozytorium) — NIE jest",
-  "pracą użytkownika i nie liczy się jako wkład. Oceniasz WYŁĄCZNIE pozostałą zawartość",
-  "repozytorium (kod, README i inne pliki) jako pracę użytkownika.",
-  "Dodatkowe stałe kryterium: repozytorium MUSI zawierać plik README.md napisany po ANGIELSKU.",
-  "NIE zwracaj pola passed — finalny werdykt policzy aplikacja z Twoich ocen per-kryterium.",
-  "Pola tekstowe wypełniaj PO POLSKU.",
-  "Zwróć WYŁĄCZNIE obiekt JSON (bez markdown, bez ```), o dokładnie tych polach:",
+  "You are a rigorous reviewer of programming tasks in the NERD - NewEveryRepoDay app.",
+  "You evaluate whether the user completed today's quest. Evaluate EACH criterion SEPARATELY —",
+  "do NOT make a single decision about the whole thing at once. For EACH criterion set met (boolean)",
+  "AND evidence:",
+  "- when met=true: point to the SPECIFIC file and code/content fragment that satisfies this criterion,",
+  "- when met=false: write EXACTLY what is missing for the criterion to be met.",
+  "Before you mark a criterion as not met, review ALL files in the material, including",
+  "subfolders (src/, tests/, web/). Do not guess — rely only on what you actually",
+  "see in the file content.",
+  "IMPORTANT: the QUEST.md file is the system instructions (the repository's starting state) — it is NOT",
+  "the user's work and does not count as a contribution. You evaluate ONLY the remaining content",
+  "of the repository (code, README and other files) as the user's work.",
+  "Additional fixed criterion: the repository MUST contain a README.md file written in ENGLISH.",
+  "Do NOT return a passed field — the app will compute the final verdict from your per-criterion evaluations.",
+  "Write all text fields in English.",
+  "Return ONLY a JSON object (no markdown, no ```), with exactly these fields:",
   '{ "perCriterion": [{ "criterion": string, "met": boolean, "evidence": string }], "descriptionOfWork": string, "reasoning": string }',
-  "perCriterion: po jednym wpisie dla KAŻDEGO wymienionego kryterium, w tej samej kolejności.",
-  "descriptionOfWork: jedno zdanie opisujące, co użytkownik faktycznie stworzył.",
-  "reasoning: krótkie, całościowe uzasadnienie (które kryteria przeszły, a które nie).",
+  "perCriterion: one entry for EACH listed criterion, in the same order.",
+  "descriptionOfWork: one sentence describing what the user actually created.",
+  "reasoning: a short, overall justification (which criteria passed and which did not).",
 ].join("\n");
 
-// Skraca dowód do krótkiego dopisku przy braku — nie zalewamy listy braków całym evidence.
+// Shortens evidence into a brief note for the missing list — we do not flood the list of gaps with the full evidence.
 function shortEvidence(evidence: string): string {
   const e = evidence.trim();
   if (e.length <= 160) return e;
   return `${e.slice(0, 157)}…`;
 }
 
-// Bezpieczny parser werdyktu. Model ocenia każde kryterium osobno; finalny werdykt
-// (passed) liczymy DETERMINISTYCZNIE w kodzie z ocen per-kryterium.
+// Safe verdict parser. The model evaluates each criterion separately; the final verdict
+// (passed) is computed DETERMINISTICALLY in code from the per-criterion evaluations.
 function parseVerdict(content: string): QuestVerdict {
   let obj: Record<string, unknown>;
   try {
     obj = JSON.parse(content);
   } catch {
-    throw new Error("Model zwrócił niepoprawny JSON oceny.");
+    throw new Error("The model returned invalid evaluation JSON.");
   }
 
-  // perCriterion: tablica obiektów { criterion, met, evidence } — odfiltruj niepoprawne wpisy.
+  // perCriterion: an array of { criterion, met, evidence } objects — filter out invalid entries.
   const perCriterion: CriterionCheck[] = Array.isArray(obj.perCriterion)
     ? obj.perCriterion
         .filter((c): c is Record<string, unknown> => !!c && typeof c === "object")
@@ -300,13 +300,13 @@ function parseVerdict(content: string): QuestVerdict {
     : [];
 
   if (perCriterion.length === 0) {
-    throw new Error("Model nie zwrócił ocen per-kryterium (perCriterion).");
+    throw new Error("The model did not return per-criterion evaluations (perCriterion).");
   }
 
-  // Werdykt DETERMINISTYCZNY: zaliczone tylko gdy KAŻDE kryterium jest spełnione.
+  // DETERMINISTIC verdict: passed only when EVERY criterion is met.
   const passed = perCriterion.length > 0 && perCriterion.every((c) => c.met);
 
-  // missing budujemy automatycznie z niespełnionych kryteriów (treść + skrót dowodu).
+  // We build missing automatically from the unmet criteria (text + short evidence).
   const missing = perCriterion
     .filter((c) => !c.met)
     .map((c) => {
@@ -324,7 +324,7 @@ function parseVerdict(content: string): QuestVerdict {
   };
 }
 
-// Ocenia quest na podstawie jego treści i materiału zebranego z repozytorium.
+// Evaluates a quest based on its content and the material collected from the repository.
 export async function evaluateQuest(
   quest: {
     title: string;
@@ -334,10 +334,8 @@ export async function evaluateQuest(
   },
   material: string,
 ): Promise<QuestVerdict> {
-  const criteriaList = quest.criteria
-    .map((c, i) => `${i + 1}. ${c}`)
-    .join("\n");
-  // Stałe kryterium README dostaje numer kolejny po kryteriach questa.
+  const criteriaList = quest.criteria.map((c, i) => `${i + 1}. ${c}`).join("\n");
+  // The fixed README criterion gets the number right after the quest's criteria.
   const readmeIndex = quest.criteria.length + 1;
 
   const content = await callOpenAI(
@@ -346,19 +344,19 @@ export async function evaluateQuest(
       {
         role: "user",
         content:
-          `QUEST DO OCENY\n\n` +
-          `Tytuł: ${quest.title}\n\n` +
-          `Instrukcja:\n${quest.instructions}\n\n` +
-          `Część otwarta (dodatkowy wkład od siebie):\n${quest.openPart || "—"}\n\n` +
-          `Kryteria zaliczenia — oceń KAŻDE osobno:\n` +
-          `${criteriaList || "(brak)"}\n` +
-          `${readmeIndex}. README.md napisany po angielsku (stałe kryterium)\n\n` +
-          `Zwróć w perCriterion po JEDNYM wpisie dla KAŻDEGO z powyższych kryteriów ` +
-          `(w tej samej kolejności, łącznie z kryterium README), każdy z met i evidence.\n\n` +
-          `=== MATERIAŁ Z REPOZYTORIUM ===\n${material}`,
+          `QUEST TO EVALUATE\n\n` +
+          `Title: ${quest.title}\n\n` +
+          `Instructions:\n${quest.instructions}\n\n` +
+          `Open-ended extension (an extra contribution of your own):\n${quest.openPart || "—"}\n\n` +
+          `Completion criteria — evaluate EACH separately:\n` +
+          `${criteriaList || "(none)"}\n` +
+          `${readmeIndex}. README.md written in English (fixed criterion)\n\n` +
+          `In perCriterion return ONE entry for EACH of the above criteria ` +
+          `(in the same order, including the README criterion), each with met and evidence.\n\n` +
+          `=== MATERIAL FROM THE REPOSITORY ===\n${material}`,
       },
     ],
-    0.2, // niska temperatura — ocena ma być powtarzalna
+    0.2, // low temperature — the evaluation should be repeatable
   );
 
   return parseVerdict(content);

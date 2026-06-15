@@ -1,15 +1,11 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  content: [
-    "./app/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./lib/**/*.{ts,tsx}",
-  ],
+  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        // GitHub dark (Primer) — każdy kolor pochodzi ze zmiennej CSS z globals.css.
+        // GitHub dark (Primer) — every color comes from a CSS variable in globals.css.
         gh: {
           bg: "var(--color-canvas)",
           "bg-deep": "var(--color-canvas-deep)",

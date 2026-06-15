@@ -1,12 +1,12 @@
-// Wspólne helpery ścieżek plików — używane przy ocenie questa (lib/quest-review.ts)
-// i wyznaczaniu języka folderu (lib/repo-language.ts).
+// Shared file path helpers — used in quest evaluation (lib/quest-review.ts)
+// and determining a folder's language (lib/repo-language.ts).
 
-// Nazwa pliku ze ścieżki (ostatni segment).
+// File name from a path (the last segment).
 export function baseName(path: string): string {
   return path.split("/").pop() ?? path;
 }
 
-// Rozszerzenie pliku, małymi literami, bez kropki ("" gdy brak rozszerzenia).
+// File extension, lowercase, without the dot ("" when there is no extension).
 export function ext(path: string): string {
   const b = baseName(path);
   const i = b.lastIndexOf(".");

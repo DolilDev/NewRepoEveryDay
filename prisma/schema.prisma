@@ -1,6 +1,6 @@
-// Schemat bazy DailyQuest (Neon / Postgres).
-// Połączenie pooled (DATABASE_URL) do zapytań aplikacji, direct (DIRECT_URL) do migracji.
-// Nazwy tabel i kolumn mapowane na snake_case (konwencja Postgresa), pola w kliencie zostają camelCase.
+// DailyQuest database schema (Neon / Postgres).
+// Pooled connection (DATABASE_URL) for application queries, direct (DIRECT_URL) for migrations.
+// Table and column names are mapped to snake_case (Postgres convention), while client fields stay camelCase.
 
 generator client {
   provider = "prisma-client-js"
@@ -12,14 +12,14 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// Status zaliczenia questa.
+// Quest completion status.
 enum QuestStatus {
   PENDING
   PASSED
   FAILED
 }
 
-// Użytkownik aplikacji (zaciągany z profilu GitHub). Korzeń wszystkich relacji.
+// Application user (pulled from the GitHub profile). The root of all relations.
 model User {
   id          String   @id @default(cuid())
   githubLogin String   @unique @map("github_login")
@@ -27,9 +27,9 @@ model User {
   avatarUrl   String?  @map("avatar_url")
   profileUrl  String?  @map("profile_url")
   bio         String?
-  createdAt   DateTime @default(now()) @map("created_at") // dołączenie do aplikacji
+  createdAt   DateTime @default(now()) @map("created_at") // joined the application
 
-  // Relacje (wszystko spięte przez user_id):
+  // Relations (everything tied together by user_id):
   quests       Quest[]
   completions  Completion[]
   achievements Achievement[]
@@ -39,27 +39,27 @@ model User {
   @@map("users")
 }
 
-// Pojedynczy quest wygenerowany dla użytkownika danego dnia.
-// Model repo-kontenera: quest to PODFOLDER w jednym repo NERD-NewEveryDayRepo.
-// Pola folder* są źródłem prawdy; repoName/repoUrl zostają jako nullable LEGACY
-// (stary model „osobne repo na quest") i nie są już zapisywane.
+// A single quest generated for a user on a given day.
+// Repo-container model: a quest is a SUBFOLDER in a single NERD-NewEveryDayRepo repo.
+// The folder* fields are the source of truth; repoName/repoUrl remain as nullable LEGACY
+// (the old "separate repo per quest" model) and are no longer written.
 model Quest {
   id           String      @id @default(cuid())
   userId       String      @map("user_id")
   date         DateTime
   title        String
-  repoName     String?     @map("repo_name") // LEGACY — stary model 1 repo/quest
-  folderName   String?     @map("folder_name") // podfolder w repo-kontenerze (np. NERD-rust-wasm)
+  repoName     String?     @map("repo_name") // LEGACY — old 1 repo/quest model
+  folderName   String?     @map("folder_name") // subfolder in the repo-container (e.g. NERD-rust-wasm)
   why          String
   instructions String
   openPart     String      @map("open_part")
-  criteria     Json // lista kryteriów zaliczenia (tablica stringów)
+  criteria     Json // list of completion criteria (array of strings)
   status       QuestStatus @default(PENDING)
   repoUrl      String?     @map("repo_url") // LEGACY
-  folderUrl    String?     @map("folder_url") // URL do folderu questa w repo-kontenerze
-  questMdUrl   String?     @map("quest_md_url") // URL do QUEST.md w folderze
+  folderUrl    String?     @map("folder_url") // URL to the quest folder in the repo-container
+  questMdUrl   String?     @map("quest_md_url") // URL to QUEST.md in the folder
   createdAt    DateTime    @default(now()) @map("created_at")
-  lastEvaluatedAt DateTime? @map("last_evaluated_at") // ostatnia próba oceny — cooldown anty-spam
+  lastEvaluatedAt DateTime? @map("last_evaluated_at") // last evaluation attempt — anti-spam cooldown
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   completions Completion[]
@@ -68,14 +68,14 @@ model Quest {
   @@map("quests")
 }
 
-// Dziennik ukończeń — źródło heatmapy i streaka.
+// Completion log — the source for the heatmap and the streak.
 model Completion {
   id                String   @id @default(cuid())
   userId            String   @map("user_id")
   questId           String   @map("quest_id")
   date              DateTime
   repoUrl           String?  @map("repo_url")
-  descriptionOfWork String?  @map("description_of_work") // krótki opis do heatmapy
+  descriptionOfWork String?  @map("description_of_work") // short description for the heatmap
   createdAt         DateTime @default(now()) @map("created_at")
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -86,7 +86,7 @@ model Completion {
   @@map("completions")
 }
 
-// Statystyki użytkownika — dokładnie jeden wiersz na usera.
+// User statistics — exactly one row per user.
 model Stats {
   id            String @id @default(cuid())
   userId        String @unique @map("user_id")
@@ -100,12 +100,12 @@ model Stats {
   @@map("stats")
 }
 
-// Odblokowane osiągnięcia. Para (user_id, type) jest unikalna — przyznawane raz.
-// WAŻNE: wiersze są trwałe — osiągnięcia nie są odbierane (brak kaskady usuwania).
+// Unlocked achievements. The (user_id, type) pair is unique — granted once.
+// IMPORTANT: rows are permanent — achievements are not revoked (no delete cascade).
 model Achievement {
   id         String   @id @default(cuid())
   userId     String   @map("user_id")
-  type       String // np. "streak_7"
+  type       String // e.g. "streak_7"
   unlockedAt DateTime @default(now()) @map("unlocked_at")
 
   user User @relation(fields: [userId], references: [id])
@@ -114,7 +114,7 @@ model Achievement {
   @@map("achievements")
 }
 
-// Wiadomości czatu użytkownika.
+// User chat messages.
 model ChatMessage {
   id        String   @id @default(cuid())
   userId    String   @map("user_id")

@@ -1,16 +1,16 @@
-// Synchronizacja zalogowanego gracza z tabelą users.
-// UWAGA: tylko po stronie serwera (API routes) — używa klienta Prisma.
+// Synchronizing the logged-in player with the users table.
+// NOTE: server-side only (API routes) — uses the Prisma client.
 
 import { prisma } from "@/lib/prisma";
 import type { ServerAuth } from "@/lib/auth-token";
 
-// Upewnia się, że istnieje wiersz w users dla zalogowanego gracza i zwraca go.
-// Upsert po githubLogin (unikalny) — nie dubluje usera, a przy ponownym logowaniu
-// odświeża dane profilu. createdAt (dołączenie do aplikacji) ustawia się raz,
-// przy tworzeniu wiersza (default now()). Zwrócone user.id wiąże questy z userem.
+// Ensures a row exists in users for the logged-in player and returns it.
+// Upsert by githubLogin (unique) — doesn't duplicate the user, and on re-login it
+// refreshes the profile data. createdAt (joined the app) is set once, when the row
+// is created (default now()). The returned user.id links quests to the user.
 export async function upsertUser(auth: ServerAuth) {
   if (!auth.login) {
-    throw new Error("Brak loginu GitHub w sesji — nie można zapisać użytkownika.");
+    throw new Error("Missing GitHub login in the session — cannot save the user.");
   }
   const profileUrl = `https://github.com/${auth.login}`;
   return prisma.user.upsert({

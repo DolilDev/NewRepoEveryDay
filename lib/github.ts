@@ -1,12 +1,12 @@
-// Serwerowy helper do GitHub REST API.
-// UWAGA: ten moduł jest wywoływany WYŁĄCZNIE po stronie serwera (callback NextAuth
-// oraz API routes). Token dostępu nigdy nie jest zwracany ani wysyłany do przeglądarki.
+// Server-side helper for the GitHub REST API.
+// NOTE: this module is called server-side ONLY (NextAuth callback and API routes).
+// The access token is never returned or sent to the browser.
 
 const GH_API = "https://api.github.com";
 
-// Wspólne nagłówki do GitHub API. Token jest OPCJONALNY: publiczne dane (profil,
-// języki repo) czytamy też bez niego, ale z tokenem mamy znacznie wyższy limit
-// zapytań (5000/h zamiast 60/h na IP).
+// Shared headers for the GitHub API. The token is OPTIONAL: public data (profile,
+// repo languages) can be read without it too, but with a token we get a far higher
+// request limit (5000/h instead of 60/h per IP).
 function ghHeaders(accessToken?: string | null): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
@@ -22,11 +22,11 @@ export type GitHubProfile = {
   followers: number;
   following: number;
   publicRepos: number;
-  createdAt: string | null; // ISO 8601, np. "2011-03-25T18:44:36Z"
+  createdAt: string | null; // ISO 8601, e.g. "2011-03-25T18:44:36Z"
 };
 
-// Pobiera profil zalogowanego użytkownika (GET /user) jego tokenem OAuth.
-// Zwraca null przy błędzie/timeoucie — logowanie nie może się od tego wywalić.
+// Fetches the signed-in user's profile (GET /user) using their OAuth token.
+// Returns null on error/timeout — sign-in must not break because of this.
 export async function fetchGitHubProfile(
   accessToken: string,
 ): Promise<GitHubProfile | null> {
@@ -50,7 +50,7 @@ export async function fetchGitHubProfile(
 }
 
 export type PublicProfile = {
-  login: string; // kanoniczny login zwrócony przez GitHub
+  login: string; // canonical login returned by GitHub
   name: string | null;
   avatarUrl: string | null;
   bio: string | null;
@@ -58,9 +58,9 @@ export type PublicProfile = {
   following: number;
 };
 
-// Publiczny profil DOWOLNEGO użytkownika GitHub po loginie (GET /users/{login}).
-// Token opcjonalny (dane publiczne), ale podnosi limit zapytań. 404/błąd → null,
-// co dla wyszukiwarki oznacza „nie ma takiego użytkownika na GitHubie".
+// Public profile of ANY GitHub user by login (GET /users/{login}).
+// Token optional (public data), but it raises the request limit. 404/error → null,
+// which for the search means "no such user on GitHub".
 export async function fetchPublicProfile(
   login: string,
   accessToken?: string | null,
@@ -87,11 +87,9 @@ export async function fetchPublicProfile(
 
 export type RepoSummary = { name: string; language: string | null };
 
-// Lista repozytoriów użytkownika (do zbudowania profilu pod prompt OpenAI).
-// Błąd zwraca pustą listę — generowanie ma działać też bez tych danych.
-export async function fetchUserRepos(
-  accessToken: string,
-): Promise<RepoSummary[]> {
+// List of the user's repositories (to build the profile for the OpenAI prompt).
+// On error returns an empty list — generation must work even without this data.
+export async function fetchUserRepos(accessToken: string): Promise<RepoSummary[]> {
   try {
     const res = await fetch(
       `${GH_API}/user/repos?per_page=100&affiliation=owner&sort=pushed`,
@@ -109,9 +107,9 @@ export async function fetchUserRepos(
   }
 }
 
-// Publiczne repozytoria danego loginu wraz z wykrytym przez GitHub językiem.
-// type=owner → tylko jego własne repo; sort=pushed → najnowsze najpierw (repo
-// questowe są świeże, więc mieszczą się w pierwszej setce). Token opcjonalny.
+// Public repositories of a given login along with the language detected by GitHub.
+// type=owner → only their own repos; sort=pushed → newest first (quest repos
+// are fresh, so they fit within the first hundred). Token optional.
 export async function fetchReposByLogin(
   login: string,
   accessToken?: string | null,
@@ -133,28 +131,26 @@ export async function fetchReposByLogin(
   }
 }
 
-// Tekstowe podsumowanie profilu (języki + przykładowe repo) dla modelu.
+// Text summary of the profile (languages + sample repos) for the model.
 export function buildProfileSummary(repos: RepoSummary[]): string {
   if (repos.length === 0) {
-    return "Użytkownik nie ma jeszcze publicznych repozytoriów. Potraktuj go jako osobę początkującą.";
+    return "The user has no public repositories yet. Treat them as a beginner.";
   }
 
   const counts = new Map<string, number>();
   for (const r of repos) {
     if (r.language) counts.set(r.language, (counts.get(r.language) ?? 0) + 1);
   }
-  const langs = [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([lang]) => lang);
+  const langs = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([lang]) => lang);
   const sampleNames = repos
     .map((r) => r.name)
     .filter(Boolean)
     .slice(0, 15);
 
   return [
-    `Używane języki (od najczęstszych): ${langs.length ? langs.join(", ") : "nieokreślone"}.`,
-    `Przykładowe repozytoria: ${sampleNames.join(", ") || "brak"}.`,
-    `Łączna liczba repozytoriów: ${repos.length}.`,
+    `Languages used (most frequent first): ${langs.length ? langs.join(", ") : "undetermined"}.`,
+    `Sample repositories: ${sampleNames.join(", ") || "none"}.`,
+    `Total number of repositories: ${repos.length}.`,
   ].join("\n");
 }
 
@@ -168,8 +164,8 @@ export type CreateRepoResult =
     }
   | { ok: false; status: number; alreadyExists: boolean; message: string };
 
-// Tworzy PUBLICZNE repo na koncie zalogowanego użytkownika (POST /user/repos).
-// Kolizja nazwy zwraca z GitHuba 422 → sygnalizujemy alreadyExists=true.
+// Creates a PUBLIC repo on the signed-in user's account (POST /user/repos).
+// A name collision returns 422 from GitHub → we signal alreadyExists=true.
 export async function createRepo(
   accessToken: string,
   name: string,
@@ -204,21 +200,22 @@ export async function createRepo(
     const err = await res.json();
     if (typeof err?.message === "string") message = err.message;
   } catch {
-    // brak ciała błędu — zostaje komunikat domyślny
+    // no error body — keep the default message
   }
-  // 422 przy tworzeniu repo to praktycznie zawsze zajęta nazwa.
+  // A 422 when creating a repo is practically always a taken name.
   return { ok: false, status: res.status, alreadyExists: res.status === 422, message };
 }
 
-// Koduje ścieżkę do URL-a Contents API zachowując ukośniki (każdy SEGMENT osobno),
-// dzięki czemu działają ścieżki zagnieżdżone, np. "NERD-rust-wasm/QUEST.md".
+// Encodes a path for the Contents API URL while keeping the slashes (each SEGMENT
+// separately), so nested paths work, e.g. "NERD-rust-wasm/QUEST.md".
 function encodePath(path: string): string {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
-// Pobiera repozytorium (GET /repos/{owner}/{repo}). Rozróżnia trzy przypadki:
-// istnieje (200), nie ma (404) i inny błąd — to kluczowe dla modelu repo-kontenera
-// (utwórz dokładnie raz, użyj istniejącego). Wynik 200 zwraca gałąź domyślną i URL.
+// Fetches a repository (GET /repos/{owner}/{repo}). Distinguishes three cases:
+// exists (200), missing (404), and other error — this is key for the container
+// repo model (create exactly once, use the existing one). A 200 returns the
+// default branch and URL.
 export type GetRepoResult =
   | {
       ok: true;
@@ -243,8 +240,7 @@ export async function getRepo(
     const d = await res.json();
     return {
       ok: true,
-      defaultBranch:
-        typeof d?.default_branch === "string" ? d.default_branch : "main",
+      defaultBranch: typeof d?.default_branch === "string" ? d.default_branch : "main",
       htmlUrl: typeof d?.html_url === "string" ? d.html_url : "",
       owner: typeof d?.owner?.login === "string" ? d.owner.login : owner,
       isPrivate: Boolean(d?.private),
@@ -254,10 +250,10 @@ export async function getRepo(
   }
 }
 
-// Czy ścieżka (plik LUB folder) istnieje w repo: GET .../contents/{path}.
-// 200 → istnieje, cokolwiek innego → traktujemy jako wolne (świeży, pusty
-// kontener bez gałęzi zwraca 404 dla wszystkiego). Używane do wykrycia kolizji
-// nazwy folderu questa.
+// Whether a path (file OR folder) exists in the repo: GET .../contents/{path}.
+// 200 → exists, anything else → we treat it as free (a fresh, empty container
+// without a branch returns 404 for everything). Used to detect a quest folder
+// name collision.
 export async function pathExists(
   accessToken: string,
   owner: string,
@@ -277,8 +273,8 @@ export async function pathExists(
   }
 }
 
-// SHA pliku pod ścieżką — wymagane przez GitHub do NADPISANIA istniejącego pliku
-// (PUT z polem sha). Brak pliku / błąd → null (wtedy PUT tworzy nowy plik).
+// SHA of the file at a path — required by GitHub to OVERWRITE an existing file
+// (PUT with a sha field). Missing file / error → null (then PUT creates a new file).
 export async function getFileSha(
   accessToken: string,
   owner: string,
@@ -300,9 +296,10 @@ export async function getFileSha(
   }
 }
 
-// Zapisuje plik tekstowy w repo (PUT .../contents/{path}). Z podanym `sha`
-// istniejącego pliku NADPISuje go; bez sha tworzy nowy. Dla pustego repo pierwszy
-// PUT tworzy pierwszy commit i gałąź domyślną. Zwraca true przy powodzeniu.
+// Saves a text file in the repo (PUT .../contents/{path}). With the `sha` of an
+// existing file it OVERWRITES it; without a sha it creates a new one. For an empty
+// repo the first PUT creates the first commit and the default branch. Returns true
+// on success.
 export async function putFile(
   accessToken: string,
   owner: string,
@@ -326,12 +323,12 @@ export async function putFile(
   return res.ok;
 }
 
-// --- Pobieranie zawartości repo do oceny (Etap B) --------------------------
+// --- Fetching repo contents for evaluation (Stage B) -----------------------
 
 export type RepoMeta = { defaultBranch: string; isPrivate: boolean };
 
-// Metadane repo: gałąź domyślna (do pobrania drzewa) i widoczność (kryterium
-// „repozytorium publiczne"). Zwraca null przy błędzie.
+// Repo metadata: the default branch (to fetch the tree) and visibility (the
+// "public repository" criterion). Returns null on error.
 export async function fetchRepoMeta(
   accessToken: string,
   owner: string,
@@ -345,8 +342,7 @@ export async function fetchRepoMeta(
     if (!res.ok) return null;
     const d = await res.json();
     return {
-      defaultBranch:
-        typeof d?.default_branch === "string" ? d.default_branch : "main",
+      defaultBranch: typeof d?.default_branch === "string" ? d.default_branch : "main",
       isPrivate: Boolean(d?.private),
     };
   } catch {
@@ -356,8 +352,8 @@ export async function fetchRepoMeta(
 
 export type RepoTreeEntry = { path: string; size: number; sha: string };
 
-// Pełne drzewo plików repo (rekurencyjnie). Zwraca tylko bloby (pliki), nie
-// katalogi. Zwraca null przy błędzie.
+// Full file tree of the repo (recursive). Returns only blobs (files), not
+// directories. Returns null on error.
 export async function fetchRepoTree(
   accessToken: string,
   owner: string,
@@ -390,8 +386,9 @@ export async function fetchRepoTree(
   }
 }
 
-// Tekstowa treść bloba po SHA. Zwraca null przy błędzie lub braku kodowania
-// base64 (np. blob binarny). Buffer.from ignoruje znaki nowej linii w base64.
+// Text content of a blob by SHA. Returns null on error or when there is no
+// base64 encoding (e.g. a binary blob). Buffer.from ignores newline characters
+// in base64.
 export async function fetchBlobText(
   accessToken: string,
   owner: string,

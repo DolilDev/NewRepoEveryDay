@@ -1,9 +1,10 @@
-// Kolory języków programowania jak na GitHubie (podzbiór z projektu linguist).
-// Używane do kropki języka przy repozytoriach questowych.
+// Programming language colors as on GitHub (a subset from the linguist project).
+// Used for the language dot next to quest repositories.
 //
-// Zasada: jeśli język jest znany z GitHub API, pokazujemy kropkę — w kolorze z
-// mapy, a dla języka spoza mapy w neutralnej szarości. Gdy języka NIE udało się
-// ustalić (null), kropki nie pokazujemy w ogóle (patrz komponent LanguageDot).
+// Rule: if the language is known from the GitHub API, we show the dot — in the
+// color from the map, and in neutral gray for a language not in the map. When the
+// language could NOT be determined (null), we don't show the dot at all (see the
+// LanguageDot component).
 
 const LANGUAGE_COLORS: Record<string, string> = {
   TypeScript: "#3178c6",
@@ -46,12 +47,12 @@ const LANGUAGE_COLORS: Record<string, string> = {
   "Jupyter Notebook": "#DA5B0B",
 };
 
-// Neutralny kolor dla języka znanego, ale spoza mapy — GitHub też pokazuje wtedy
-// szarą kropkę zamiast jej ukrywać.
+// Neutral color for a language that is known but not in the map — GitHub also shows
+// a gray dot in that case instead of hiding it.
 const DEFAULT_COLOR = "#8b949e";
 
-// Kolor kropki dla danego języka. Zawsze zwraca kolor (gdy język jest znany);
-// o tym, czy w ogóle pokazać kropkę, decyduje komponent na podstawie null/obecności.
+// The dot color for a given language. Always returns a color (when the language is
+// known); whether to show the dot at all is decided by the component based on null/presence.
 export function languageColor(language: string): string {
   return LANGUAGE_COLORS[language] ?? DEFAULT_COLOR;
 }

@@ -1,9 +1,9 @@
-// GET /api/quest/recent — questy zalogowanego gracza z bazy.
-// Zwraca:
-//  - today: dzisiejszy quest (wg CET) lub null — UI pokazuje go zamiast przycisku
-//    generowania (twardy limit 1/dzień widoczny po stronie klienta),
-//  - recent: do 5 ostatnich questów (malejąco po dacie) do panelu "Ostatnie questy".
-// Dane publiczne — bez tokenów.
+// GET /api/quest/recent — the signed-in player's quests from the database.
+// Returns:
+//  - today: today's quest (in CET) or null — the UI shows it instead of the
+//    generate button (the hard 1/day limit visible on the client side),
+//  - recent: up to the 5 most recent quests (descending by date) for the "Recent quests" panel.
+// Public data — no tokens.
 import { NextResponse } from "next/server";
 import { getServerAuth } from "@/lib/auth-token";
 import { prisma } from "@/lib/prisma";
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     take: 5,
   });
 
-  // Dzisiejszy quest = najnowszy, którego dzień CET równa się dzisiejszemu.
+  // Today's quest = the most recent one whose CET day equals today's.
   const top = quests[0];
   const today =
     top && top.date.getTime() === cetDayStart().getTime()
@@ -33,7 +33,7 @@ export async function GET(req: Request) {
           folderUrl: top.folderUrl ?? "",
           questFileUrl: top.questMdUrl ?? "",
           fileUploaded: Boolean(top.questMdUrl),
-          status: top.status, // PENDING / PASSED — decyduje, czy quest jest ukończony
+          status: top.status, // PENDING / PASSED — decides whether the quest is completed
         }
       : null;
 

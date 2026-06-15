@@ -1,8 +1,8 @@
-// GET /api/leaderboard — globalny ranking graczy z bazy.
-// Wszyscy użytkownicy z dołączonymi statystykami, posortowani malejąco po
-// currentStreak (rozstrzygnięcie: totalQuests, potem points). Gracze bez wiersza
-// stats trafiają tu z zerami — to w porządku. Zwraca też meLogin (login
-// zalogowanego), by UI wyróżniło jego wiersz. Dane publiczne — bez tokenów.
+// GET /api/leaderboard — global player leaderboard from the database.
+// All users with their stats included, sorted in descending order by
+// currentStreak (tie-break: totalQuests, then points). Players without a stats
+// row land here with zeros — that's fine. Also returns meLogin (the login of
+// the signed-in user) so the UI can highlight their row. Public data — no tokens.
 import { NextResponse } from "next/server";
 import { getServerAuth } from "@/lib/auth-token";
 import { prisma } from "@/lib/prisma";
@@ -37,7 +37,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ players, meLogin });
   } catch (e) {
-    console.error("[api/leaderboard] Nie udało się pobrać rankingu:", e);
+    console.error("[api/leaderboard] Failed to fetch the leaderboard:", e);
     return NextResponse.json({ players: [], meLogin }, { status: 500 });
   }
 }

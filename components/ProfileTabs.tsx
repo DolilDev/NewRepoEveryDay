@@ -19,8 +19,8 @@ function ListIcon() {
   );
 }
 
-// login = oglądany profil (własny lub cudzy) — buduje trasy /profile/[login].
-// repoCount = liczba questów gracza z bazy (licznik przy „Repositories").
+// login = the viewed profile (your own or someone else's) — builds /profile/[login] routes.
+// repoCount = the player's quest count from the database (counter next to "Repositories").
 export default function ProfileTabs({
   login,
   repoCount,
@@ -32,7 +32,13 @@ export default function ProfileTabs({
   const base = `/profile/${login}`;
 
   const TABS = [
-    { href: base, label: "Overview", icon: BookIcon, count: null as number | null, exact: true },
+    {
+      href: base,
+      label: "Overview",
+      icon: BookIcon,
+      count: null as number | null,
+      exact: true,
+    },
     {
       href: `${base}/repositories`,
       label: "Repositories",
@@ -45,9 +51,7 @@ export default function ProfileTabs({
   return (
     <nav className="-mb-px flex h-12 items-end gap-4 overflow-x-auto">
       {TABS.map((tab) => {
-        const active = tab.exact
-          ? pathname === tab.href
-          : pathname.startsWith(tab.href);
+        const active = tab.exact ? pathname === tab.href : pathname.startsWith(tab.href);
         const Icon = tab.icon;
         return (
           <Link
@@ -60,7 +64,7 @@ export default function ProfileTabs({
                 : "border-transparent text-gh-muted hover:text-gh-text"
             }`}
           >
-            {/* Ikona zawsze szara (gh-muted) — kolor nie zmienia się przy aktywacji. */}
+            {/* Icon always gray (gh-muted) — the color doesn't change when active. */}
             <span className="text-gh-muted">
               <Icon />
             </span>

@@ -3,28 +3,28 @@
 @tailwind utilities;
 
 /* =========================================================================
-   Paleta GitHub dark (Primer) — zdefiniowana RAZ, używana wszędzie przez var().
-   Żadnych innych, losowych kolorów w komponentach.
+   GitHub dark palette (Primer) — defined ONCE, used everywhere via var().
+   No other, random colors in the components.
    ========================================================================= */
 :root {
-  --color-canvas: #0d1117; /* pola/inputy (np. wyszukiwarki) */
-  --color-canvas-deep: #010409; /* głębokie tło: body, navbar, środek, stopka */
-  --color-panel: #0c1015; /* tło paneli bocznych: lewy i prawy */
-  --color-surface: #161b22; /* karty, panele, navbar */
-  --color-hover: #21262d; /* hover, aktywne elementy, pola */
-  --color-fg: #e6edf3; /* tekst główny */
-  --color-fg-muted: #8b949e; /* tekst drugorzędny */
-  --color-fg-subtle: #6e7681; /* tekst wyciszony, placeholdery */
-  --color-border: #30363d; /* obramowania */
-  --color-border-subtle: #21262d; /* delikatne linie */
-  --color-accent: #58a6ff; /* linki, nazwy repo */
-  --color-tab-active: #f78166; /* dolna linia aktywnej zakładki (Overview itd.) */
-  --color-link-muted: #9898a1; /* wyciszony link, np. "Zobacz historię" */
-  --color-success: #3fb950; /* zielony przycisk / sukces */
-  --color-danger: #f85149; /* błędy / stan czerwony */
-  --color-purple: #a371f7; /* placeholder avatara */
-  --color-calendar-done: #39d353; /* kalendarz: pole ukończone */
-  --color-calendar-empty: #161b22; /* kalendarz: pole puste */
+  --color-canvas: #0d1117; /* fields/inputs (e.g. search boxes) */
+  --color-canvas-deep: #010409; /* deep background: body, navbar, center, footer */
+  --color-panel: #0c1015; /* side panel background: left and right */
+  --color-surface: #161b22; /* cards, panels, navbar */
+  --color-hover: #21262d; /* hover, active elements, fields */
+  --color-fg: #e6edf3; /* primary text */
+  --color-fg-muted: #8b949e; /* secondary text */
+  --color-fg-subtle: #6e7681; /* muted text, placeholders */
+  --color-border: #30363d; /* borders */
+  --color-border-subtle: #21262d; /* subtle lines */
+  --color-accent: #58a6ff; /* links, repo names */
+  --color-tab-active: #f78166; /* bottom line of the active tab (Overview etc.) */
+  --color-link-muted: #9898a1; /* muted link, e.g. "View history" */
+  --color-success: #3fb950; /* green button / success */
+  --color-danger: #f85149; /* errors / red state */
+  --color-purple: #a371f7; /* avatar placeholder */
+  --color-calendar-done: #39d353; /* calendar: completed cell */
+  --color-calendar-empty: #161b22; /* calendar: empty cell */
 }
 
 html,
@@ -33,12 +33,12 @@ body {
   color: var(--color-fg);
 }
 
-/* Font bazowy 14px (Primer) — Tailwind text-* nadpisuje tam, gdzie trzeba. */
+/* Base font 14px (Primer) — Tailwind text-* overrides where needed. */
 body {
   font-size: 14px;
 }
 
-/* Cienkie paski przewijania w stylu GitHuba */
+/* Thin, GitHub-style scrollbars */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) var(--color-surface);

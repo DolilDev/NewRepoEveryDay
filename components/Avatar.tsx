@@ -1,5 +1,5 @@
-// Avatar gracza: jeśli dostaniemy prawdziwy obrazek z GitHuba (avatar_url) —
-// renderujemy <img>. W przeciwnym razie fallback: fioletowe kółko z inicjałami.
+// Player avatar: if we get a real image from GitHub (avatar_url) —
+// we render <img>. Otherwise fallback: a purple circle with initials.
 
 function initials(name: string): string {
   return name

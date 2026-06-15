@@ -1,31 +1,44 @@
-// Model repo-kontenera: JEDNO publiczne repo na użytkownika (NERD-NewEveryDayRepo),
-// w którym każdy quest to osobny PODFOLDER. Ten moduł trzyma stałą nazwę kontenera,
-// zapewnia jego istnienie i składa adresy URL folderów/plików.
-// UWAGA: tylko po stronie serwera — używa tokenu GitHub.
+// Container-repo model: ONE public repo per user (NERD-NewEveryDayRepo),
+// in which every quest is a separate SUBFOLDER. This module holds the fixed
+// container name, ensures it exists, and builds the folder/file URLs.
+// NOTE: server-side only — it uses the GitHub token.
 import { getRepo, createRepo, putFile, getFileSha } from "@/lib/github";
 import { prisma } from "@/lib/prisma";
 
-// Stała nazwa repo-kontenera — jedno na użytkownika. Spójna z scripts/db-reset.mjs.
+// Fixed container-repo name — one per user. Kept in sync with scripts/db-reset.mjs.
 export const CONTAINER_REPO = "NERD-NewEveryDayRepo";
 
+// Base URL of the deployed NERD app — used to build the public profile link.
+const APP_URL = "https://newrepoeveryday.vercel.app";
+
 const CONTAINER_DESCRIPTION =
-  "Kolekcja codziennych questów z NERD — New Every Day Repo. Każdy quest to osobny podfolder.";
+  "A collection of daily quests from NERD — New Every Day Repo. Each quest is a separate subfolder.";
 
-// Bazowy README zakładany przy TWORZENIU kontenera. Część 6 nadpisuje go
-// automatycznym spisem questów (tabelą), więc to tylko treść startowa.
-const SEED_README = `# NERD - New Every Day Repo
+// Header link to the public NERD profile page — placed at the very top of the README.
+function profileLink(login: string): string {
+  const url = `${APP_URL}/profile/${login}`;
+  return `🔗 **My NERD profile:** [${url}](${url})`;
+}
 
-Kolekcja codziennych questów z aplikacji NERD. Każdy quest to osobny podfolder
-zawierający plik \`QUEST.md\` (instrukcję zadania) oraz Twoje rozwiązanie.
+// Base README created when the container is FIRST set up. Part 6 overwrites it
+// with the automatic quest index (a table), so this is just the starting content.
+function seedReadme(login: string): string {
+  return `# NERD - New Every Day Repo
+
+${profileLink(login)}
+
+A collection of daily quests from the NERD app. Each quest is a separate subfolder
+containing a \`QUEST.md\` file (the task brief) and your solution.
 `;
+}
 
 export type Container = { owner: string; defaultBranch: string; htmlUrl: string };
 
-// Zapewnia istnienie repo-kontenera dla danego użytkownika:
-//  - jeśli ISTNIEJE → zwraca jego dane (użyj istniejącego),
-//  - jeśli NIE MA (404) → tworzy publiczne repo i zakłada bazowy README
-//    (pierwszy commit tworzy gałąź domyślną).
-// Rzuca czytelnym błędem przy twardym problemie z GitHubem.
+// Ensures the container repo exists for the given user:
+//  - if it EXISTS → returns its data (reuse the existing one),
+//  - if it does NOT (404) → creates a public repo and seeds the base README
+//    (the first commit creates the default branch).
+// Throws a readable error on a hard GitHub problem.
 export async function ensureContainer(
   accessToken: string,
   login: string,
@@ -41,14 +54,12 @@ export async function ensureContainer(
     };
   }
   if (existing.status !== 404) {
-    throw new Error(
-      `Nie udało się sprawdzić repo-kontenera (GitHub ${existing.status}).`,
-    );
+    throw new Error(`Failed to check the container repo (GitHub ${existing.status}).`);
   }
 
   const created = await createRepo(accessToken, CONTAINER_REPO, CONTAINER_DESCRIPTION);
   if (!created.ok) {
-    // 422 = repo jednak istnieje (np. wyścig równoległych żądań) → odczytaj je.
+    // 422 = the repo exists after all (e.g. a race between parallel requests) → read it.
     if (created.alreadyExists) {
       const again = await getRepo(accessToken, login, CONTAINER_REPO);
       if (again.ok) {
@@ -60,19 +71,19 @@ export async function ensureContainer(
       }
     }
     throw new Error(
-      `Nie udało się utworzyć repo-kontenera (GitHub ${created.status}): ${created.message}`,
+      `Failed to create the container repo (GitHub ${created.status}): ${created.message}`,
     );
   }
 
   const owner = created.owner || login;
-  // Pierwszy commit: bazowy README (zakłada gałąź domyślną w pustym repo).
+  // First commit: the base README (creates the default branch in the empty repo).
   await putFile(
     accessToken,
     owner,
     CONTAINER_REPO,
     "README.md",
-    "Inicjalizacja repo-kontenera NERD",
-    SEED_README,
+    "Initialize the NERD container repo",
+    seedReadme(login),
   );
   return {
     owner,
@@ -81,7 +92,7 @@ export async function ensureContainer(
   };
 }
 
-// Adres folderu questa na GitHubie (widok drzewa katalogu).
+// URL of a quest folder on GitHub (directory tree view).
 export function folderUrlFor(
   htmlUrl: string,
   branch: string,
@@ -90,7 +101,7 @@ export function folderUrlFor(
   return `${htmlUrl}/tree/${branch}/${folderName}`;
 }
 
-// Adres pliku QUEST.md wewnątrz folderu questa.
+// URL of the QUEST.md file inside a quest folder.
 export function questMdUrlFor(
   htmlUrl: string,
   branch: string,
@@ -99,7 +110,7 @@ export function questMdUrlFor(
   return `${htmlUrl}/blob/${branch}/${folderName}/QUEST.md`;
 }
 
-// --- Część 6: automatyczne README kontenera (spis questów) ------------------
+// --- Part 6: automatic container README (quest index) -----------------------
 
 type ReadmeQuest = {
   title: string;
@@ -108,13 +119,16 @@ type ReadmeQuest = {
   status: string; // QuestStatus: PENDING / PASSED / FAILED
 };
 
-// Zabezpiecza tekst do komórki tabeli markdown: zwija nowe linie i escapuje `|`.
+// Sanitizes text for a markdown table cell: collapses newlines and escapes `|`.
 function cell(text: string): string {
-  return text.replace(/\r?\n+/g, " ").replace(/\|/g, "\\|").trim();
+  return text
+    .replace(/\r?\n+/g, " ")
+    .replace(/\|/g, "\\|")
+    .trim();
 }
 
-// Krótki opis questa do kolumny „Opis": pierwsze zdanie z `why` (fallback: tytuł),
-// przycięte do rozsądnej długości.
+// Short quest description for the "Description" column: first sentence of `why`
+// (fallback: the title), trimmed to a reasonable length.
 function shortDescription(q: ReadmeQuest): string {
   const src = (q.why || q.title || "").replace(/\s+/g, " ").trim();
   const m = src.match(/^(.+?[.!?])(\s|$)/);
@@ -123,22 +137,24 @@ function shortDescription(q: ReadmeQuest): string {
   return s;
 }
 
-// Buduje CAŁĄ treść README kontenera z aktualnego stanu questów (czysty string,
-// składany przez aplikację — NIE przez OpenAI). Questy podajemy od najnowszego.
-// README jest regenerowane w całości, więc nigdy nie ma duplikatów.
-export function buildContainerReadme(quests: ReadmeQuest[]): string {
+// Builds the ENTIRE container README from the current quest state (a plain string,
+// assembled by the app — NOT by OpenAI). Quests are passed newest-first.
+// The README is regenerated in full, so there are never any duplicates.
+export function buildContainerReadme(quests: ReadmeQuest[], login: string): string {
   const header = [
     "# NERD - New Every Day Repo",
     "",
-    "Kolekcja codziennych questów z aplikacji NERD — jeden quest dziennie, każdy w" +
-      " osobnym podfolderze z plikiem `QUEST.md` (instrukcją) i Twoim rozwiązaniem.",
+    profileLink(login),
+    "",
+    "A collection of daily quests from the NERD app — one quest per day, each in" +
+      " its own subfolder with a `QUEST.md` file (the brief) and your solution.",
     "",
   ];
 
   if (quests.length === 0) {
     return [
       ...header,
-      "_Brak questów — wygeneruj pierwszy w aplikacji NERD._",
+      "_No quests yet — generate your first one in the NERD app._",
       "",
     ].join("\n");
   }
@@ -153,19 +169,20 @@ export function buildContainerReadme(quests: ReadmeQuest[]): string {
 
   return [
     ...header,
-    "| Status | Quest | Opis | Folder |",
-    "| :----: | ----- | ---- | ------ |",
+    "| Status | Quest | Description | Folder |",
+    "| :----: | ----- | ----------- | ------ |",
     ...rows,
     "",
     "---",
-    "_Spis generowany automatycznie przez NERD przy każdym dodaniu i zaliczeniu questa._",
+    "_Index generated automatically by NERD whenever a quest is added or passed._",
     "",
   ].join("\n");
 }
 
-// Regeneruje i NADPISUJE README kontenera danego użytkownika aktualnym spisem
-// questów z bazy. Best-effort: błąd (brak kontenera, problem z GitHubem) zwraca
-// false i NIE może wywrócić generowania/oceny questa, które ją wołają.
+// Regenerates and OVERWRITES the given user's container README with the current
+// quest index from the database. Best-effort: an error (no container, GitHub
+// problem) returns false and must NOT break the quest generation/evaluation that
+// calls it.
 export async function regenerateContainerReadme(
   accessToken: string,
   login: string,
@@ -181,8 +198,8 @@ export async function regenerateContainerReadme(
       select: { title: true, why: true, folderName: true, status: true },
     });
 
-    const markdown = buildContainerReadme(quests);
-    // Do nadpisania istniejącego README potrzebny jest jego sha (brak → tworzy nowy).
+    const markdown = buildContainerReadme(quests, login);
+    // Overwriting the existing README requires its sha (missing → creates a new one).
     const sha = await getFileSha(
       accessToken,
       owner,
@@ -195,7 +212,7 @@ export async function regenerateContainerReadme(
       owner,
       CONTAINER_REPO,
       "README.md",
-      "Aktualizuj spis questów w README",
+      "Update the quest index in the README",
       markdown,
       sha,
     );

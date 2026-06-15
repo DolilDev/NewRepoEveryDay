@@ -24,22 +24,34 @@ function Spinner() {
       className="animate-spin text-gh-green"
       aria-hidden
     >
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" className="opacity-25" />
-      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        stroke="currentColor"
+        strokeWidth="3"
+        className="opacity-25"
+      />
+      <path
+        d="M21 12a9 9 0 0 0-9-9"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 type QuestResult = {
   title: string;
-  folderName: string | null; // nazwa podfolderu questa w repo-kontenerze
-  folderUrl: string; // link do folderu questa na GitHubie
+  folderName: string | null; // name of the quest subfolder in the container repo
+  folderUrl: string; // link to the quest folder on GitHub
   questFileUrl: string;
   fileUploaded: boolean;
-  status?: "PENDING" | "PASSED" | "FAILED"; // brak = świeżo wygenerowany (PENDING)
+  status?: "PENDING" | "PASSED" | "FAILED"; // none = freshly generated (PENDING)
 };
 
-// Odpowiedź oceny po zaliczeniu — do komunikatu sukcesu.
+// Evaluation response after passing — for the success message.
 type SubmitResult = {
   descriptionOfWork: string;
   pointsAwarded: number;
@@ -48,10 +60,10 @@ type SubmitResult = {
   longestStreak: number;
 };
 
-// Stan zgłoszenia questa do oceny (niezależny od fazy generowania).
+// State of submitting a quest for evaluation (independent of the generation phase).
 type SubmitPhase = "idle" | "checking" | "passed" | "rejected" | "error";
 
-// Pozycja panelu "Ostatnie questy" — prawdziwy quest z bazy.
+// Item in the "Most recent quests" panel — a real quest from the database.
 type RecentQuest = {
   id: string;
   title: string;
@@ -60,16 +72,16 @@ type RecentQuest = {
   relativeDate: string;
 };
 
-// Quest do lewego panelu "Twoje ostatnie projekty" (z tabeli quests).
+// Quest for the left "Your recent projects" panel (from the quests table).
 type Project = {
   id: string;
-  name: string; // nazwa folderu questa
+  name: string; // name of the quest folder
   title: string;
-  folderUrl: string; // link do folderu w repo-kontenerze
-  language: string | null; // język folderu (kolorowa kropka) lub null
+  folderUrl: string; // link to the folder in the container repo
+  language: string | null; // folder language (colored dot) or null
 };
 
-// Statystyki gracza — na razie do licznika streaka w nagłówku dashboardu.
+// Player stats — for now just for the streak counter in the dashboard header.
 type Stats = {
   currentStreak: number;
   longestStreak: number;
@@ -81,15 +93,15 @@ type Phase = "idle" | "loading" | "success" | "error";
 
 const STORAGE_KEY = "dq:lastQuest";
 
-// Klucz dnia (lokalny) — prosta, kliencka blokada „jeden quest dziennie".
+// Day key (local) — a simple, client-side "one quest per day" lock.
 function todayKey(): string {
   const d = new Date();
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
-// Polska odmiana słowa „dzień" przy liczbie: 1 dzień, 0/2/5/22… dni.
-function dniLabel(n: number): string {
-  return n === 1 ? "dzień" : "dni";
+// English pluralization of "day" by count: 1 day, 0/2/5/22… days.
+function daysLabel(n: number): string {
+  return n === 1 ? "day" : "days";
 }
 
 export default function DashboardPage() {
@@ -102,24 +114,24 @@ export default function DashboardPage() {
   const [projectQuery, setProjectQuery] = useState("");
   const [recentQuests, setRecentQuests] = useState<RecentQuest[]>([]);
 
-  // Dane gracza z bazy (statystyki + projekty questowe). meLoaded rozróżnia
-  // „jeszcze ładuję" od „pusto" — pusty panel ma wyglądać jak start, nie błąd.
+  // Player data from the database (stats + quest projects). meLoaded distinguishes
+  // "still loading" from "empty" — an empty panel should look like a start, not an error.
   const [stats, setStats] = useState<Stats | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [meLoaded, setMeLoaded] = useState(false);
 
-  // Zgłaszanie do oceny (osobny tor od generowania).
+  // Submitting for evaluation (a separate track from generation).
   const [submitPhase, setSubmitPhase] = useState<SubmitPhase>("idle");
   const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null);
   const [submitMissing, setSubmitMissing] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState("");
 
-  // Quest uznany za ukończony: świeżo zaliczony w tej sesji albo PASSED z bazy.
+  // Quest considered completed: freshly passed in this session or PASSED in the database.
   const completed = submitPhase === "passed" || result?.status === "PASSED";
 
-  // Po odświeżeniu strony przywracamy dzisiejszy wynik z localStorage — to tylko
-  // szybki HINT (działa offline / przed odpowiedzią API). Źródłem prawdy jest baza
-  // (patrz loadQuests niżej), która ten stan potwierdzi albo skoryguje.
+  // After a page refresh we restore today's result from localStorage — this is only
+  // a quick HINT (works offline / before the API responds). The source of truth is the
+  // database (see loadQuests below), which will confirm or correct this state.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -130,12 +142,12 @@ export default function DashboardPage() {
         setPhase("success");
       }
     } catch {
-      // brak/uszkodzony wpis — ignorujemy
+      // missing/corrupted entry — ignore it
     }
   }, []);
 
-  // Źródło prawdy: questy z bazy. Ustawia panel "Ostatnie questy" oraz — gdy w
-  // bazie jest dzisiejszy quest (limit 1/dzień) — pokazuje go zamiast przycisku.
+  // Source of truth: quests from the database. Sets the "Most recent quests" panel and —
+  // when today's quest exists in the database (limit 1/day) — shows it instead of the button.
   const loadQuests = useCallback(async () => {
     try {
       const res = await fetch("/api/quest/recent");
@@ -151,20 +163,20 @@ export default function DashboardPage() {
             JSON.stringify({ date: todayKey(), result: data.today }),
           );
         } catch {
-          // brak localStorage — pomijamy hint
+          // no localStorage — skip the hint
         }
       } else {
-        // Baza nie ma dzisiejszego questa → przycisk generowania (nie ruszamy
-        // trwającego generowania ani ekranu błędu).
+        // The database has no quest for today → generation button (we don't touch
+        // an ongoing generation or the error screen).
         setPhase((p) => (p === "loading" || p === "error" ? p : "idle"));
         setResult((r) => (r ? null : r));
       }
     } catch {
-      // sieć/serwer niedostępny — zostaje stan z localStorage (hint)
+      // network/server unavailable — the localStorage state (hint) remains
     }
   }, []);
 
-  // Statystyki + projekty questowe zalogowanego gracza (lewy panel, licznik streaka).
+  // Stats + quest projects of the signed-in player (left panel, streak counter).
   const loadMe = useCallback(async () => {
     try {
       const res = await fetch("/api/me");
@@ -173,13 +185,13 @@ export default function DashboardPage() {
       setStats(data.stats ?? null);
       setProjects(Array.isArray(data.projects) ? data.projects : []);
     } catch {
-      // sieć/serwer niedostępny — zostaje poprzedni stan
+      // network/server unavailable — the previous state remains
     } finally {
       setMeLoaded(true);
     }
   }, []);
 
-  // Po zalogowaniu (i przy starcie, jeśli już zalogowany) czytamy dane z bazy.
+  // After signing in (and at startup, if already signed in) we read data from the database.
   useEffect(() => {
     if (!isAuthed) return;
     loadQuests();
@@ -194,7 +206,7 @@ export default function DashboardPage() {
 
   async function handleGenerate() {
     if (phase === "loading") return;
-    // Bez logowania nie ma tokenu do tworzenia repo — kierujemy na logowanie.
+    // Without signing in there's no token to create a repo — redirect to sign-in.
     if (!isAuthed) {
       signIn("github");
       return;
@@ -206,7 +218,7 @@ export default function DashboardPage() {
       const res = await fetch("/api/quest/generate", { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.error || `Błąd serwera (${res.status}).`);
+        throw new Error(data?.error || `Server error (${res.status}).`);
       }
       const r = data as QuestResult;
       setResult(r);
@@ -217,18 +229,18 @@ export default function DashboardPage() {
           JSON.stringify({ date: todayKey(), result: r }),
         );
       } catch {
-        // brak localStorage — blokada zadziała tylko w obrębie sesji strony
+        // no localStorage — the lock will only work within the page session
       }
-      // Odśwież panele "Ostatnie questy" i "Twoje ostatnie projekty" z bazy.
+      // Refresh the "Most recent quests" and "Your recent projects" panels from the database.
       loadQuests();
       loadMe();
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Nieznany błąd.");
+      setErrorMsg(e instanceof Error ? e.message : "Unknown error.");
       setPhase("error");
     }
   }
 
-  // Zgłoszenie dzisiejszego questa do oceny (GitHub + OpenAI — chwilę trwa).
+  // Submit today's quest for evaluation (GitHub + OpenAI — takes a moment).
   async function handleSubmit() {
     if (submitPhase === "checking") return;
     setSubmitPhase("checking");
@@ -238,41 +250,41 @@ export default function DashboardPage() {
       const res = await fetch("/api/quest/submit", { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.error || `Błąd serwera (${res.status}).`);
+        throw new Error(data?.error || `Server error (${res.status}).`);
       }
       if (data.passed) {
-        // alreadyCompleted: quest był już zaliczony wcześniej (brak nowych punktów).
+        // alreadyCompleted: the quest was already passed earlier (no new points).
         if (!data.alreadyCompleted) {
           setSubmitResult(data as SubmitResult);
         }
         setSubmitPhase("passed");
-        loadQuests(); // odśwież status questa z bazy (PASSED)
-        loadMe(); // odśwież licznik streaka po zaliczeniu
+        loadQuests(); // refresh the quest status from the database (PASSED)
+        loadMe(); // refresh the streak counter after passing
       } else {
         setSubmitMissing(Array.isArray(data.missing) ? data.missing : []);
         setSubmitPhase("rejected");
       }
     } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : "Nieznany błąd.");
+      setSubmitError(e instanceof Error ? e.message : "Unknown error.");
       setSubmitPhase("error");
     }
   }
 
   return (
-    // Offset z lewej (lg) robi miejsce na panel przyklejony do krawędzi okna.
+    // Left offset (lg) makes room for the panel pinned to the window edge.
     <div className="lg:pl-[336px]">
-      {/* LEWY PANEL — POZA wyśrodkowanym kontenerem: przyklejony do lewej krawędzi
-          okna, pełna wysokość pod navbarem (fixed). Wizualnie nachodzi na stopkę,
-          ale jej nie przesuwa (jest poza zwykłym przepływem). */}
+      {/* LEFT PANEL — OUTSIDE the centered container: pinned to the left edge of the
+          window, full height below the navbar (fixed). It visually overlaps the footer
+          but doesn't shift it (it's outside the normal flow). */}
       <aside className="flex flex-col border-b border-gh-border bg-gh-panel lg:fixed lg:bottom-0 lg:left-0 lg:top-16 lg:z-10 lg:w-[336px] lg:border-b-0 lg:border-r lg:border-t">
-        {/* Równa kolumna 287px wyśrodkowana w panelu 336px (49px marginesu).
-            Nagłówek, pole wyszukiwania i lista mają tę samą lewą i prawą krawędź.
-            pt-8 daje 32px odstępu POD linią navbara, zanim zacznie się nagłówek. */}
+        {/* An even 287px column centered in the 336px panel (49px margin).
+            The header, search field, and list share the same left and right edges.
+            pt-8 gives 32px of space BELOW the navbar line before the header starts. */}
         <div className="mx-auto flex w-[287px] flex-1 flex-col pt-8 lg:min-h-0">
           <header className="pb-3 text-sm font-semibold text-gh-text">
-            Twoje ostatnie projekty
+            Your recent projects
           </header>
-          {/* Sztywne pole 287×32px — nie rozciąga się ani nie kurczy. */}
+          {/* Fixed 287×32px field — it neither stretches nor shrinks. */}
           <div className="pb-1">
             <div className="flex h-8 w-[287px] items-center gap-2 rounded-md border border-gh-border bg-gh-bg px-2 text-gh-subtle transition-colors focus-within:border-gh-blue">
               <SearchIcon />
@@ -280,21 +292,21 @@ export default function DashboardPage() {
                 type="text"
                 value={projectQuery}
                 onChange={(e) => setProjectQuery(e.target.value)}
-                placeholder="Znajdź projekt..."
-                aria-label="Znajdź projekt po nazwie"
+                placeholder="Find a project..."
+                aria-label="Find a project by name"
                 className="w-full bg-transparent text-sm text-gh-text placeholder:text-gh-subtle focus:outline-none"
               />
             </div>
           </div>
           <ul className="max-h-[420px] overflow-y-auto lg:max-h-none lg:min-h-0 lg:flex-1">
             {isAuthed && !meLoaded ? (
-              // Stan ładowania — odróżniony od pustego (puste ≠ błąd).
-              <li className="py-4 text-sm text-gh-subtle">Ładowanie…</li>
+              // Loading state — distinct from empty (empty ≠ error).
+              <li className="py-4 text-sm text-gh-subtle">Loading…</li>
             ) : filteredProjects.length === 0 ? (
               <li className="py-4 text-sm text-gh-subtle">
                 {projectQuery.trim()
-                  ? "Brak pasujących projektów."
-                  : "Brak projektów — wygeneruj pierwszy quest."}
+                  ? "No matching projects."
+                  : "No projects — generate your first quest."}
               </li>
             ) : (
               filteredProjects.map((p) => (
@@ -305,9 +317,9 @@ export default function DashboardPage() {
                     rel="noopener noreferrer"
                     className="group flex min-w-0 flex-col gap-1 py-2"
                   >
-                    {/* font-normal (400): Segoe UI nie ma kroju Medium (500),
-                        więc 500 renderuje się jak Semibold (pogrubione). 400 ma
-                        realny krój Regular i jest pewnie lżejsze, nie bold. */}
+                    {/* font-normal (400): Segoe UI has no Medium (500) weight,
+                        so 500 renders like Semibold (bold). 400 has a real
+                        Regular face and is reliably lighter, not bold. */}
                     <span className="flex min-w-0 items-center gap-2 text-sm font-normal text-gh-text">
                       <RepoIcon />
                       <span className="truncate group-hover:underline">{p.name}</span>
@@ -317,7 +329,7 @@ export default function DashboardPage() {
                         {p.title}
                       </span>
                     )}
-                    {/* Kropka języka repo (kolor jak na GitHubie); brak języka → brak kropki. */}
+                    {/* Repo language dot (GitHub-style color); no language → no dot. */}
                     {p.language && (
                       <LanguageDot
                         language={p.language}
@@ -332,36 +344,36 @@ export default function DashboardPage() {
         </div>
       </aside>
 
-      {/* WYŚRODKOWANY KONTENER TREŚCI (max 1280px) — tylko środek + prawy panel. */}
+      {/* CENTERED CONTENT CONTAINER (max 1280px) — only the center + right panel. */}
       <div className="mx-auto max-w-[1280px] px-6 py-6">
-        {/* Licznik streaka — z stats.currentStreak zalogowanego gracza (brak → 0). */}
+        {/* Streak counter — from the signed-in player's stats.currentStreak (none → 0). */}
         {isAuthed && (
           <div className="mb-4">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-gh-border bg-gh-surface px-3 py-1 text-sm font-semibold text-gh-text">
-              🔥 {stats?.currentStreak ?? 0}{" "}
-              {dniLabel(stats?.currentStreak ?? 0)} z rzędu
+              🔥 {stats?.currentStreak ?? 0} {daysLabel(stats?.currentStreak ?? 0)} in a
+              row
             </span>
           </div>
         )}
 
         <div className="flex flex-col gap-6 lg:flex-row">
-          {/* ŚRODEK — generowanie / realizacja questa (głębokie tło #010409) */}
+          {/* CENTER — generating / completing the quest (deep background #010409) */}
           <section className="min-w-0 flex-1 bg-gh-bg-deep">
             {phase === "loading" ? (
-              // STAN: generowanie w toku
+              // STATE: generation in progress
               <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 text-gh-muted">
                 <Spinner />
                 <p className="text-sm">
-                  Generuję quest i tworzę folder w repo-kontenerze…
+                  Generating the quest and creating a folder in the container repo…
                 </p>
-                <p className="text-xs text-gh-subtle">To może chwilę potrwać.</p>
+                <p className="text-xs text-gh-subtle">This may take a moment.</p>
               </div>
             ) : phase === "error" ? (
-              // STAN: błąd + ponowienie
+              // STATE: error + retry
               <div className="flex min-h-[420px] flex-col items-center justify-center gap-4 px-4 text-center">
                 <div className="max-w-md rounded-md border border-gh-red/40 bg-gh-red/10 px-4 py-4 text-sm text-gh-text">
                   <div className="mb-1 font-semibold text-gh-red">
-                    Nie udało się wygenerować questa
+                    Failed to generate the quest
                   </div>
                   <p className="text-gh-muted">{errorMsg}</p>
                 </div>
@@ -370,35 +382,34 @@ export default function DashboardPage() {
                   onClick={handleGenerate}
                   className="rounded-md bg-gh-green px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
                 >
-                  Spróbuj ponownie
+                  Try again
                 </button>
               </div>
             ) : phase === "success" && result ? (
-              // STAN: repo utworzone
+              // STATE: repo created
               <article className="overflow-hidden rounded-md border border-gh-border bg-gh-surface">
                 <header className="flex items-center justify-between border-b border-gh-border bg-gh-surface2 px-4 py-4">
                   <span className="text-xs font-semibold uppercase tracking-wide text-gh-muted">
-                    Dzisiejszy quest
+                    Today&apos;s quest
                   </span>
                   <span className="rounded-full border border-gh-green/40 bg-gh-green/10 px-2 py-1 text-xs font-semibold text-gh-green">
-                    {completed ? "Zaliczony 100/100" : "Folder utworzony"}
+                    {completed ? "Passed 100/100" : "Folder created"}
                   </span>
                 </header>
 
                 <div className="space-y-4 p-4">
                   <div className="rounded-md border border-gh-green/40 bg-gh-green/10 px-4 py-3 text-sm text-gh-text">
-                    ✅ Folder questa został utworzony w repo-kontenerze — instrukcja
-                    jest w nim (plik <span className="font-mono">QUEST.md</span>).
+                    ✅ The quest folder was created in the container repo — the
+                    instructions are inside it (the{" "}
+                    <span className="font-mono">QUEST.md</span> file).
                   </div>
 
-                  <h2 className="text-xl font-semibold text-gh-text">
-                    {result.title}
-                  </h2>
+                  <h2 className="text-xl font-semibold text-gh-text">{result.title}</h2>
 
-                  {/* Nazwa folderu questa */}
+                  {/* Quest folder name */}
                   <div>
                     <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-gh-muted">
-                      Folder questa
+                      Quest folder
                     </div>
                     <div className="flex items-center gap-2 rounded-md border border-gh-border bg-gh-bg px-3 py-2">
                       <RepoIcon />
@@ -408,7 +419,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Linki do GitHuba (nowa karta) */}
+                  {/* Links to GitHub (new tab) */}
                   <div className="flex flex-wrap gap-2">
                     <a
                       href={result.folderUrl}
@@ -416,7 +427,7 @@ export default function DashboardPage() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 rounded-md bg-gh-green px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
                     >
-                      Otwórz folder questa ↗
+                      Open quest folder ↗
                     </a>
                     {result.fileUploaded && (
                       <a
@@ -425,24 +436,24 @@ export default function DashboardPage() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 rounded-md border border-gh-border bg-gh-surface px-4 py-2 text-sm font-semibold text-gh-text transition-colors hover:bg-gh-surface2"
                       >
-                        Zobacz QUEST.md ↗
+                        View QUEST.md ↗
                       </a>
                     )}
                   </div>
 
                   {!result.fileUploaded && (
                     <p className="text-xs text-gh-red">
-                      Folder powstał, ale nie udało się dodać pliku QUEST.md —
-                      możesz spróbować wygenerować quest ponownie jutro.
+                      The folder was created, but the QUEST.md file could not be added —
+                      you can try generating the quest again tomorrow.
                     </p>
                   )}
 
-                  {/* Oddanie questa do automatycznej oceny */}
+                  {/* Submitting the quest for automatic evaluation */}
                   {completed ? (
-                    // STAN: quest zaliczony
+                    // STATE: quest passed
                     <div className="rounded-md border border-gh-green/40 bg-gh-green/10 px-4 py-4 text-sm">
                       <div className="mb-1 font-semibold text-gh-green">
-                        Quest zaliczony! 🎉
+                        Quest passed! 🎉
                       </div>
                       {submitResult ? (
                         <p className="text-gh-text">
@@ -450,33 +461,33 @@ export default function DashboardPage() {
                             ? `${submitResult.descriptionOfWork} `
                             : ""}
                           <span className="text-gh-muted">
-                            +{submitResult.pointsAwarded} pkt · streak:{" "}
+                            +{submitResult.pointsAwarded} pts · streak:{" "}
                             {submitResult.currentStreak}
                           </span>
                         </p>
                       ) : (
                         <p className="text-gh-muted">
-                          Ten quest został już zaliczony.
+                          This quest has already been passed.
                         </p>
                       )}
                     </div>
                   ) : (
-                    // STAN: do oddania
+                    // STATE: ready to submit
                     <div className="rounded-md border border-gh-border bg-gh-bg px-4 py-4 text-sm">
                       <div className="mb-1 font-semibold text-gh-text">
-                        Oddaj zadanie do sprawdzenia
+                        Submit your task for review
                       </div>
                       <p className="mb-3 text-gh-muted">
-                        Wykonaj zadanie zgodnie z plikiem{" "}
-                        <span className="font-mono">QUEST.md</span>, wypchnij kod do
-                        repozytorium i zgłoś do automatycznej oceny (sprawdzamy, czy
-                        spełnione są wszystkie kryteria).
+                        Complete the task according to the{" "}
+                        <span className="font-mono">QUEST.md</span> file, push your code
+                        to the repository, and submit it for automatic evaluation (we
+                        check whether all criteria are met).
                       </p>
 
                       {submitPhase === "rejected" && (
                         <div className="mb-3 rounded-md border border-gh-red/40 bg-gh-red/10 px-3 py-3">
                           <div className="mb-1 font-semibold text-gh-red">
-                            Jeszcze nie zaliczone
+                            Not passed yet
                           </div>
                           {submitMissing.length > 0 ? (
                             <ul className="list-disc space-y-1 pl-5 text-gh-text">
@@ -485,12 +496,10 @@ export default function DashboardPage() {
                               ))}
                             </ul>
                           ) : (
-                            <p className="text-gh-text">
-                              Nie wszystkie kryteria są spełnione.
-                            </p>
+                            <p className="text-gh-text">Not all criteria are met.</p>
                           )}
                           <p className="mt-2 text-xs text-gh-muted">
-                            Popraw repozytorium i zgłoś ponownie.
+                            Fix the repository and submit again.
                           </p>
                         </div>
                       )}
@@ -506,10 +515,10 @@ export default function DashboardPage() {
                         className="inline-flex items-center gap-2 rounded-md bg-gh-green px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-default disabled:opacity-60"
                       >
                         {submitPhase === "checking"
-                          ? "Sprawdzam repozytorium…"
+                          ? "Checking the repository…"
                           : submitPhase === "rejected"
-                            ? "Zgłoś ponownie"
-                            : "Zgłoś do oceny"}
+                            ? "Submit again"
+                            : "Submit for evaluation"}
                       </button>
                     </div>
                   )}
@@ -518,11 +527,11 @@ export default function DashboardPage() {
                 <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-gh-border bg-gh-surface2 px-4 py-4">
                   <div className="text-sm text-gh-muted">
                     <div>
-                      Następny quest za <Countdown />
-                      <span className="ml-1 text-gh-subtle">(północ CET)</span>
+                      Next quest in <Countdown />
+                      <span className="ml-1 text-gh-subtle">(midnight CET)</span>
                     </div>
                     <div className="mt-1 text-xs text-gh-subtle">
-                      Repo-kontener musi pozostać publiczne.
+                      The container repo must remain public.
                     </div>
                   </div>
                   <button
@@ -530,12 +539,12 @@ export default function DashboardPage() {
                     disabled
                     className="cursor-default rounded-md border border-gh-border bg-gh-surface px-4 py-2 text-sm font-semibold text-gh-muted"
                   >
-                    Wygenerowano dziś
+                    Generated today
                   </button>
                 </footer>
               </article>
             ) : (
-              // STAN: bezczynny — duży przycisk na środku
+              // STATE: idle — large button in the center
               <div className="flex min-h-[420px] flex-col items-center justify-center gap-3">
                 <button
                   type="button"
@@ -544,35 +553,35 @@ export default function DashboardPage() {
                   className="rounded-md bg-gh-green px-6 py-4 text-base font-semibold text-white transition hover:brightness-110 disabled:cursor-default disabled:opacity-60"
                 >
                   {isAuthed
-                    ? "Wygeneruj dzisiejszy quest"
-                    : "Zaloguj się przez GitHub, aby wygenerować quest"}
+                    ? "Generate today's quest"
+                    : "Sign in with GitHub to generate a quest"}
                 </button>
                 {!isAuthed && authStatus !== "loading" && (
                   <p className="text-xs text-gh-subtle">
-                    Quest tworzy podfolder w Twoim repo-kontenerze na GitHubie.
+                    The quest creates a subfolder in your container repo on GitHub.
                   </p>
                 )}
               </div>
             )}
           </section>
 
-          {/* PRAWY PANEL — Ostatnie questy: oś czasu z kropkami (max 5, z bazy) */}
+          {/* RIGHT PANEL — Most recent quests: timeline with dots (max 5, from the database) */}
           <aside className="lg:w-[312px] lg:shrink-0">
             <div className="rounded-md border border-gh-border bg-gh-panel p-4">
               <header className="mb-4 text-sm font-semibold text-gh-text">
-                Ostatnie questy
+                Most recent quests
               </header>
 
               {recentQuests.length === 0 ? (
-                // Pusty stan — dyskretny tekst zamiast mocków.
+                // Empty state — discreet text instead of mocks.
                 <p className="text-sm text-gh-subtle">
-                  Nie masz jeszcze żadnych questów.
+                  You don&apos;t have any quests yet.
                 </p>
               ) : (
-                /* Oś czasu: JEDNA ciągła pionowa linia (#30363d) biegnąca od
-                   pierwszej kropki aż do dołu obszaru zawartości panelu (nie
-                   urywa się na ostatnim queście). Kropki to węzły siedzące na
-                   osi, tekst odsunięty w prawo (gap-3). */
+                /* Timeline: ONE continuous vertical line (#30363d) running from
+                   the first dot all the way to the bottom of the panel's content
+                   area (it doesn't stop at the last quest). The dots are nodes
+                   sitting on the axis, with text shifted to the right (gap-3). */
                 <div className="relative">
                   <span
                     aria-hidden
@@ -582,14 +591,14 @@ export default function DashboardPage() {
                   <ol>
                     {recentQuests.map((q) => (
                       <li key={q.id} className="flex gap-3 pb-6">
-                        {/* Kropka-węzeł na osi (linia przechodzi przez jej środek) */}
+                        {/* Dot node on the axis (the line passes through its center) */}
                         <div className="flex flex-col items-center" aria-hidden>
                           <span className="mt-1 h-[9px] w-[9px] shrink-0 rounded-full bg-gh-border" />
                         </div>
 
-                        {/* Treść pozycji: czas (poza linkiem) + klikalny odnośnik
-                            obejmujący tytuł i nazwę repo. Hover: obie linijki na
-                            niebiesko (#58a6ff) z podkreśleniem, bez zmiany tła. */}
+                        {/* Item content: time (outside the link) + a clickable link
+                            covering the title and repo name. Hover: both lines turn
+                            blue (#58a6ff) with an underline, no background change. */}
                         <div className="min-w-0 flex-1">
                           <div className="text-xs text-gh-muted">{q.relativeDate}</div>
                           <a
@@ -610,13 +619,13 @@ export default function DashboardPage() {
                     ))}
                   </ol>
 
-                  {/* Link do pełnej historii — wyrównany do kolumny tekstu,
-                      oś biegnie po jego lewej stronie aż do dołu. */}
+                  {/* Link to the full history — aligned to the text column,
+                      the axis runs along its left side all the way down. */}
                   <a
                     href="#"
                     className="ml-[21px] inline-block text-sm font-light text-gh-link-muted no-underline hover:text-gh-blue hover:no-underline"
                   >
-                    Zobacz historię →
+                    View history →
                   </a>
                 </div>
               )}

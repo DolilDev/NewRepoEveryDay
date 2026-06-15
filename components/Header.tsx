@@ -8,7 +8,14 @@ import Avatar from "./Avatar";
 
 function SearchIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden className="shrink-0">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      aria-hidden
+      className="shrink-0"
+    >
       <path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z" />
     </svg>
   );
@@ -32,7 +39,14 @@ function BellIcon() {
 
 function GitHubMark() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden className="shrink-0">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      aria-hidden
+      className="shrink-0"
+    >
       <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
     </svg>
   );
@@ -41,7 +55,7 @@ function GitHubMark() {
 export default function Header() {
   const pathname = usePathname();
   const rankingActive = pathname.startsWith("/leaderboard");
-  // Tylko strona główna ma wyższy navbar (64px); pozostałe strony 52px.
+  // Only the home page has a taller navbar (64px); other pages 52px.
   const isHome = pathname === "/";
 
   const { data: session, status } = useSession();
@@ -51,7 +65,7 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Wyszukiwarka profili: wpisany login GitHub → otwórz /profile/[login] na NERD.
+  // Profile search: entered GitHub login → open /profile/[login] on NERD.
   const [profileQuery, setProfileQuery] = useState("");
   function handleProfileSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -61,7 +75,7 @@ export default function Header() {
     setProfileQuery("");
   }
 
-  // Zamykanie menu avatara po kliknięciu poza nim lub klawiszem Escape.
+  // Close the avatar menu when clicking outside it or pressing the Escape key.
   useEffect(() => {
     if (!menuOpen) return;
     function onPointer(e: MouseEvent) {
@@ -81,17 +95,15 @@ export default function Header() {
   }, [menuOpen]);
 
   return (
-    <header
-      className={`bg-gh-bg-deep ${isHome ? "border-b border-gh-border" : ""}`}
-    >
-      {/* Pełna szerokość okna — bez wyśrodkowanego kontenera, by elementy
-          dosięgały skrajnych rogów (padding boczny 16px). */}
+    <header className={`bg-gh-bg-deep ${isHome ? "border-b border-gh-border" : ""}`}>
+      {/* Full window width — no centered container, so elements
+          reach the outermost corners (16px side padding). */}
       <div
         className={`relative top-[4px] flex items-center justify-between gap-4 px-4 ${
           isHome ? "h-16" : "h-[52px]"
         }`}
       >
-        {/* Lewa strona: logo + nazwa */}
+        {/* Left side: logo + name */}
         <Link
           href="/"
           title="NERD - NewEveryRepoDay"
@@ -100,34 +112,30 @@ export default function Header() {
           NERD
         </Link>
 
-        {/* Prawa strona: wyszukiwarka profili → Ranking → dzwonek → avatar / logowanie */}
+        {/* Right side: profile search → Leaderboard → bell → avatar / sign in */}
         <div className="flex items-center gap-2">
-          {/* Wyszukiwarka profili po loginie GitHub — Enter otwiera /profile/[login].
-              Ukryta na bardzo wąskich ekranach, by nie ściskać reszty navbara. */}
-          <form
-            onSubmit={handleProfileSearch}
-            role="search"
-            className="hidden sm:block"
-          >
+          {/* Profile search by GitHub login — Enter opens /profile/[login].
+              Hidden on very narrow screens so the rest of the navbar isn't cramped. */}
+          <form onSubmit={handleProfileSearch} role="search" className="hidden sm:block">
             <div className="flex h-8 items-center gap-1.5 rounded-md border border-gh-border bg-gh-bg px-2 text-gh-subtle transition-colors focus-within:border-gh-blue">
               <SearchIcon />
               <input
                 type="text"
                 value={profileQuery}
                 onChange={(e) => setProfileQuery(e.target.value)}
-                placeholder="Szukaj profilu..."
-                aria-label="Szukaj profilu po loginie GitHub"
+                placeholder="Search profiles..."
+                aria-label="Search profiles by GitHub login"
                 className="w-32 bg-transparent text-sm text-gh-text placeholder:text-gh-subtle focus:outline-none md:w-44"
               />
             </div>
           </form>
 
-          {/* Zakładka Ranking — ikona w obramowaniu, jak powiadomienia */}
+          {/* Leaderboard tab — bordered icon, like notifications */}
           <Link
             href="/leaderboard"
             aria-current={rankingActive ? "page" : undefined}
-            aria-label="Ranking"
-            title="Ranking"
+            aria-label="Leaderboard"
+            title="Leaderboard"
             className={`inline-flex h-8 w-8 items-center justify-center rounded-md border border-gh-border transition-colors ${
               rankingActive
                 ? "bg-gh-surface2 text-gh-text"
@@ -137,18 +145,18 @@ export default function Header() {
             <GraphIcon />
           </Link>
 
-          {/* Powiadomienia (ozdobne, nieaktywne) */}
+          {/* Notifications (decorative, inactive) */}
           <button
             type="button"
             disabled
-            aria-label="Powiadomienia (wkrótce)"
+            aria-label="Notifications (coming soon)"
             className="inline-flex h-8 w-8 cursor-default items-center justify-center rounded-md border border-gh-border text-gh-muted"
           >
             <BellIcon />
           </button>
 
-          {/* Stan sesji: ładowanie → placeholder, zalogowany → avatar z menu,
-              niezalogowany → przycisk logowania GitHub. */}
+          {/* Session state: loading → placeholder, signed in → avatar with menu,
+              signed out → GitHub sign-in button. */}
           {status === "loading" ? (
             <span className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gh-surface2" />
           ) : user ? (
@@ -188,7 +196,7 @@ export default function Header() {
                     onClick={() => setMenuOpen(false)}
                     className="block px-3 py-2 text-sm text-gh-text hover:bg-gh-surface2"
                   >
-                    Twój profil
+                    Your profile
                   </Link>
                   <button
                     type="button"
@@ -199,7 +207,7 @@ export default function Header() {
                     }}
                     className="block w-full px-3 py-2 text-left text-sm text-gh-text hover:bg-gh-surface2"
                   >
-                    Wyloguj się
+                    Sign out
                   </button>
                 </div>
               )}

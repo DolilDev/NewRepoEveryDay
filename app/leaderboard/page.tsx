@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Avatar from "@/components/Avatar";
 
-// Gracz w rankingu — kształt zgodny z odpowiedzią /api/leaderboard.
+// Player in the leaderboard — shape matching the /api/leaderboard response.
 type Player = {
   id: string;
   name: string;
@@ -22,7 +22,7 @@ export default function LeaderboardPage() {
   const [meLogin, setMeLogin] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Ranking liczymy serwerowo — tu tylko pobieramy gotową, posortowaną listę.
+  // The leaderboard is computed server-side — here we just fetch the ready, sorted list.
   useEffect(() => {
     let active = true;
     (async () => {
@@ -34,7 +34,7 @@ export default function LeaderboardPage() {
         setPlayers(Array.isArray(data.players) ? data.players : []);
         setMeLogin(typeof data.meLogin === "string" ? data.meLogin : null);
       } catch {
-        // sieć/serwer niedostępny — zostaje pusty ranking
+        // network/server unavailable — the leaderboard stays empty
       } finally {
         if (active) setLoading(false);
       }
@@ -44,7 +44,7 @@ export default function LeaderboardPage() {
     };
   }, []);
 
-  // Ranga z pełnej listy (kolejność z serwera), żeby filtr nie zmieniał numerów.
+  // Rank from the full list (server order) so the filter doesn't change the numbers.
   const ranked = useMemo(
     () => players.map((player, i) => ({ player, rank: i + 1 })),
     [players],
@@ -54,17 +54,16 @@ export default function LeaderboardPage() {
   const visible = q
     ? ranked.filter(
         ({ player }) =>
-          player.name.toLowerCase().includes(q) ||
-          player.login.toLowerCase().includes(q),
+          player.name.toLowerCase().includes(q) || player.login.toLowerCase().includes(q),
       )
     : ranked;
 
   return (
     <div className="mx-auto w-3/5 space-y-6 px-6 py-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gh-text">Ranking</h1>
+        <h1 className="text-2xl font-semibold text-gh-text">Leaderboard</h1>
         <p className="text-sm text-gh-muted">
-          Globalna tabela liderów — sortowana po aktualnym streaku.
+          Global leaderboard — sorted by current streak.
         </p>
       </div>
 
@@ -72,8 +71,8 @@ export default function LeaderboardPage() {
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Szukaj gracza po nazwie lub @loginie…"
-        aria-label="Szukaj gracza"
+        placeholder="Search for a player by name or @login…"
+        aria-label="Search for a player"
         className="h-9 w-full rounded-md border border-gh-border bg-gh-bg px-3 text-sm text-gh-text placeholder:text-gh-subtle focus:border-gh-blue focus:outline-none"
       />
 
@@ -82,33 +81,27 @@ export default function LeaderboardPage() {
           <thead>
             <tr className="bg-gh-surface2 text-left text-xs uppercase tracking-wide text-gh-muted">
               <th className="w-12 px-4 py-2 text-center font-semibold">#</th>
-              <th className="px-4 py-2 font-semibold">Gracz</th>
+              <th className="px-4 py-2 font-semibold">Player</th>
               <th className="px-4 py-2 text-right font-semibold">Streak</th>
               <th className="hidden px-4 py-2 text-right font-semibold sm:table-cell">
-                Questy
+                Quests
               </th>
-              <th className="px-4 py-2 text-right font-semibold">Punkty</th>
+              <th className="px-4 py-2 text-right font-semibold">Points</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              // Stan ładowania — odróżniony od pustego rankingu.
+              // Loading state — distinct from an empty leaderboard.
               <tr className="border-t border-gh-border bg-gh-surface">
-                <td
-                  colSpan={5}
-                  className="px-4 py-8 text-center text-sm text-gh-muted"
-                >
-                  Ładowanie rankingu…
+                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gh-muted">
+                  Loading the leaderboard…
                 </td>
               </tr>
             ) : players.length === 0 ? (
-              // Stan pusty — nikt jeszcze nie gra (nie błąd).
+              // Empty state — nobody is playing yet (not an error).
               <tr className="border-t border-gh-border bg-gh-surface">
-                <td
-                  colSpan={5}
-                  className="px-4 py-8 text-center text-sm text-gh-muted"
-                >
-                  Nikt jeszcze nie zaczął grać — bądź pierwszy!
+                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gh-muted">
+                  Nobody has started playing yet — be the first!
                 </td>
               </tr>
             ) : (
@@ -119,9 +112,7 @@ export default function LeaderboardPage() {
                   <tr
                     key={player.id}
                     className={`border-t border-gh-border ${
-                      isMe
-                        ? "bg-gh-surface2"
-                        : "bg-gh-surface hover:bg-gh-surface2"
+                      isMe ? "bg-gh-surface2" : "bg-gh-surface hover:bg-gh-surface2"
                     }`}
                   >
                     <td className="px-4 py-2 text-center font-mono text-gh-muted">
@@ -142,7 +133,7 @@ export default function LeaderboardPage() {
                             </span>
                             {isMe && (
                               <span className="rounded-full border border-gh-green/40 bg-gh-green/10 px-2 text-xs font-semibold uppercase text-gh-green">
-                                Ty
+                                You
                               </span>
                             )}
                           </div>
@@ -164,7 +155,7 @@ export default function LeaderboardPage() {
                       {player.totalQuests}
                     </td>
                     <td className="px-4 py-2 text-right font-semibold text-gh-text">
-                      {player.points.toLocaleString("pl-PL")}
+                      {player.points.toLocaleString("en-US")}
                     </td>
                   </tr>
                 );
@@ -172,11 +163,8 @@ export default function LeaderboardPage() {
             )}
             {!loading && players.length > 0 && visible.length === 0 && (
               <tr className="border-t border-gh-border bg-gh-surface">
-                <td
-                  colSpan={5}
-                  className="px-4 py-8 text-center text-sm text-gh-muted"
-                >
-                  Brak graczy pasujących do „{query.trim()}”.
+                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gh-muted">
+                  No players matching &quot;{query.trim()}&quot;.
                 </td>
               </tr>
             )}

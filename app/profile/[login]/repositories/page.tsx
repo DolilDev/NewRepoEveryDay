@@ -22,7 +22,7 @@ export default async function ProfileRepositoriesPage({
   params: { login: string };
 }) {
   const profile = await getProfile(decodeURIComponent(params.login));
-  // Brak profilu → layout pokazuje komunikat „nie znaleziono".
+  // No profile → the layout shows a "not found" message.
   if (!profile) return null;
 
   const [quests, langMap] = await Promise.all([
@@ -32,14 +32,14 @@ export default async function ProfileRepositoriesPage({
 
   return (
     <div>
-      {/* Pasek wyszukiwania i filtrów (na razie nieaktywny — wygląd jak GitHub) */}
+      {/* Search and filter bar (inactive for now — GitHub-style look) */}
       <div className="flex flex-wrap items-center gap-2 border-b border-gh-border pb-4">
         <input
           type="text"
           readOnly
           disabled
           placeholder="Find a repository..."
-          aria-label="Znajdź repozytorium (wkrótce)"
+          aria-label="Find a repository (coming soon)"
           className="h-8 min-w-0 flex-1 cursor-default rounded-md border border-gh-border bg-gh-bg px-3 text-sm text-gh-text placeholder:text-gh-subtle focus:outline-none"
         />
         {FILTERS.map((f) => (
@@ -55,11 +55,9 @@ export default async function ProfileRepositoriesPage({
         ))}
       </div>
 
-      {/* Lista repozytoriów questowych (od najnowszego do najstarszego) */}
+      {/* List of quest repositories (newest to oldest) */}
       {quests.length === 0 ? (
-        <p className="py-10 text-center text-sm text-gh-muted">
-          Brak repozytoriów.
-        </p>
+        <p className="py-10 text-center text-sm text-gh-muted">No repositories.</p>
       ) : (
         <ul>
           {quests.map((repo) => (
@@ -76,7 +74,7 @@ export default async function ProfileRepositoriesPage({
                     rel="noopener noreferrer"
                     className="text-lg font-semibold text-gh-blue hover:underline"
                   >
-                    {repo.folderName ?? "(bez folderu)"}
+                    {repo.folderName ?? "(no folder)"}
                   </a>
                   <span className="rounded-full border border-gh-border px-2 py-0.5 text-xs font-medium text-gh-muted">
                     Public
@@ -86,9 +84,11 @@ export default async function ProfileRepositoriesPage({
                 <p className="mt-2 text-sm text-gh-muted">{repo.title}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-gh-muted">
                   <LanguageDot
-                    language={repo.folderName ? langMap.get(repo.folderName) ?? null : null}
+                    language={
+                      repo.folderName ? (langMap.get(repo.folderName) ?? null) : null
+                    }
                   />
-                  <span>Utworzono {relativeQuestDate(repo.date)}</span>
+                  <span>Created {relativeQuestDate(repo.date)}</span>
                 </div>
               </div>
             </li>

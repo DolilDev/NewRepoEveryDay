@@ -1,7 +1,7 @@
-// POST /api/quest/submit — oddawanie i ocena dzisiejszego questa (Etap B).
-// Przepływ: pobierz materiał z repo (cz.1) → oceń modelem (cz.2) → przy zaliczeniu
-// kaskada w jednej transakcji: status PASSED, completion, stats (cz.3) i osiągnięcia.
-// Token GitHub i klucz OpenAI używane WYŁĄCZNIE serwerowo — nie wracają do przeglądarki.
+// POST /api/quest/submit — submitting and evaluating today's quest (Stage B).
+// Flow: fetch material from the repo (part 1) → evaluate with the model (part 2) → on pass
+// a cascade in a single transaction: status PASSED, completion, stats (part 3) and achievements.
+// The GitHub token and the OpenAI key are used ONLY server-side — they never return to the browser.
 import { NextResponse } from "next/server";
 import { getServerAuth } from "@/lib/auth-token";
 import { prisma } from "@/lib/prisma";
@@ -12,53 +12,53 @@ import { evaluateQuest } from "@/lib/openai";
 
 export const runtime = "nodejs";
 
-// Minimalny odstęp między kolejnymi ocenami tego samego questa.
+// Minimum interval between consecutive evaluations of the same quest.
 const EVAL_COOLDOWN_MS = 30_000;
 
 export async function POST(req: Request) {
   const auth = await getServerAuth(req);
   if (!auth?.login) {
     return NextResponse.json(
-      { error: "Nie jesteś zalogowany. Zaloguj się przez GitHub." },
+      { error: "You are not signed in. Sign in with GitHub." },
       { status: 401 },
     );
   }
   const { accessToken, login } = auth;
 
   try {
-    // Dzisiejszy quest (wg CET) tego użytkownika.
+    // This user's today's quest (in CET).
     const quest = await prisma.quest.findFirst({
       where: { user: { githubLogin: login }, date: cetDayStart() },
     });
     if (!quest) {
       return NextResponse.json(
-        { error: "Nie masz dziś questa do zgłoszenia. Najpierw wygeneruj quest." },
+        { error: "You have no quest to submit today. Generate a quest first." },
         { status: 400 },
       );
     }
-    // Zaliczony quest jest już zamknięty — nie oceniamy ponownie.
+    // A passed quest is already closed — we do not evaluate it again.
     if (quest.status === "PASSED") {
       return NextResponse.json({ passed: true, alreadyCompleted: true });
     }
 
-    // Quest musi mieć przypisany folder (model repo-kontenera). Stary format bez
-    // folderu nie ma czego oceniać — po wyczyszczeniu danych takich już nie ma.
+    // A quest must have a folder assigned (the container repo model). The old format
+    // without a folder has nothing to evaluate — after the data cleanup these no longer exist.
     if (!quest.folderName) {
       return NextResponse.json(
-        { error: "Ten quest nie ma przypisanego folderu. Wygeneruj nowy quest." },
+        { error: "This quest has no folder assigned. Generate a new quest." },
         { status: 400 },
       );
     }
 
-    // Rate-limit per quest: każda ocena ciągnie drzewo repo z GitHuba i woła OpenAI,
-    // więc blokujemy spam (cooldown w bazie — odporne na serverless/cold-start).
-    // Znacznik bijemy PRZED kosztownymi operacjami, by liczyła się każda próba.
+    // Per-quest rate limit: each evaluation pulls the repo tree from GitHub and calls OpenAI,
+    // so we block spam (cooldown in the database — resilient to serverless/cold-start).
+    // We stamp the marker BEFORE the costly operations so that every attempt counts.
     if (quest.lastEvaluatedAt) {
       const elapsed = Date.now() - quest.lastEvaluatedAt.getTime();
       if (elapsed < EVAL_COOLDOWN_MS) {
         const wait = Math.ceil((EVAL_COOLDOWN_MS - elapsed) / 1000);
         return NextResponse.json(
-          { error: `Za szybko — odczekaj ${wait} s przed kolejną oceną.` },
+          { error: `Too fast — wait ${wait} s before the next evaluation.` },
           { status: 429 },
         );
       }
@@ -68,8 +68,8 @@ export async function POST(req: Request) {
       data: { lastEvaluatedAt: new Date() },
     });
 
-    // CZĘŚĆ 1: materiał TYLKO z folderu questa w repo-kontenerze
-    // (QUEST.md = stan startowy, reszta plików w folderze = praca usera).
+    // PART 1: material ONLY from the quest folder in the container repo
+    // (QUEST.md = the starting state, the rest of the files in the folder = the user's work).
     const collected = await collectFolderMaterial(
       accessToken,
       login,
@@ -80,16 +80,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: collected.error }, { status: 502 });
     }
 
-    // Folder z samym QUEST.md → werdykt niezaliczony BEZ wołania OpenAI.
+    // A folder with only QUEST.md → a failed verdict WITHOUT calling OpenAI.
     if (!collected.hasUserWork) {
       return NextResponse.json({
         passed: false,
-        missing: ["Nie dodano żadnej pracy — folder questa zawiera tylko QUEST.md."],
-        reasoning: "W folderze questa nie ma jeszcze żadnego wkładu użytkownika.",
+        missing: ["No work was added — the quest folder contains only QUEST.md."],
+        reasoning: "There is no user contribution in the quest folder yet.",
       });
     }
 
-    // CZĘŚĆ 2: ocena modelu.
+    // PART 2: model evaluation.
     const criteria = Array.isArray(quest.criteria)
       ? quest.criteria.filter((c): c is string => typeof c === "string")
       : [];
@@ -103,8 +103,8 @@ export async function POST(req: Request) {
       collected.material,
     );
 
-    // CZĘŚĆ 4 (odrzucenie): quest ZOSTAJE PENDING — można poprawić i zgłosić ponownie.
-    // perCriterion dorzucamy, by front mógł pokazać szczegóły per-kryterium z dowodem.
+    // PART 4 (rejection): the quest STAYS PENDING — it can be fixed and submitted again.
+    // We add perCriterion so the frontend can show per-criterion details with evidence.
     if (!verdict.passed) {
       return NextResponse.json({
         passed: false,
@@ -114,19 +114,19 @@ export async function POST(req: Request) {
       });
     }
 
-    // CZĘŚĆ 3: kaskada przy zaliczeniu — wszystko w jednej transakcji.
+    // PART 3: the cascade on pass — everything in a single transaction.
     const today = cetDayStart();
     const yesterday = new Date(today.getTime() - 86_400_000);
 
     const summary = await prisma.$transaction(async (tx) => {
-      // 1) Status questa → PASSED.
+      // 1) Quest status → PASSED.
       await tx.quest.update({
         where: { id: quest.id },
         data: { status: "PASSED" },
       });
 
-      // 2) Wpis w dzienniku ukończeń (źródło heatmapy i streaka).
-      // repoUrl wskazuje teraz folder questa w repo-kontenerze.
+      // 2) An entry in the completions log (the source of the heatmap and streak).
+      // repoUrl now points to the quest folder in the container repo.
       await tx.completion.create({
         data: {
           userId: quest.userId,
@@ -137,7 +137,7 @@ export async function POST(req: Request) {
         },
       });
 
-      // 3) Streak liczony wg CET: poprzednie ukończenie sprzed dziś.
+      // 3) Streak computed in CET: the previous completion before today.
       const prevStats = await tx.stats.findUnique({
         where: { userId: quest.userId },
       });
@@ -148,16 +148,16 @@ export async function POST(req: Request) {
 
       let currentStreak: number;
       if (!lastCompletion) {
-        currentStreak = 1; // pierwszy ukończony quest
+        currentStreak = 1; // first completed quest
       } else if (lastCompletion.date.getTime() === yesterday.getTime()) {
-        currentStreak = (prevStats?.currentStreak ?? 0) + 1; // ciągłość
+        currentStreak = (prevStats?.currentStreak ?? 0) + 1; // continuity
       } else {
-        currentStreak = 1; // była przerwa → reset
+        currentStreak = 1; // there was a gap → reset
       }
 
       const longestStreak = Math.max(prevStats?.longestStreak ?? 0, currentStreak);
       const totalQuests = (prevStats?.totalQuests ?? 0) + 1;
-      const pointsAwarded = 100 + 10 * currentStreak; // stała 100 + bonus za streak
+      const pointsAwarded = 100 + 10 * currentStreak; // flat 100 + streak bonus
       const points = (prevStats?.points ?? 0) + pointsAwarded;
 
       await tx.stats.upsert({
@@ -172,9 +172,9 @@ export async function POST(req: Request) {
         },
       });
 
-      // 4) Osiągnięcia. Para (userId, type) jest unikalna — createMany ze
-      // skipDuplicates przyznaje tylko brakujące i nie duplikuje (wiersze trwałe).
-      const earned = ["first_quest"]; // każde zaliczenie = pierwszy quest spełniony
+      // 4) Achievements. The (userId, type) pair is unique — createMany with
+      // skipDuplicates grants only the missing ones and does not duplicate (rows are permanent).
+      const earned = ["first_quest"]; // every pass = the first quest is satisfied
       if (currentStreak >= 7) earned.push("streak_7");
       if (currentStreak >= 30) earned.push("streak_30");
       if (currentStreak >= 100) earned.push("streak_100");
@@ -188,8 +188,8 @@ export async function POST(req: Request) {
       return { currentStreak, longestStreak, totalQuests, points, pointsAwarded };
     });
 
-    // Część 6: odśwież spis questów w README kontenera (status tego questa → ✅).
-    // Best-effort — zaliczenie jest już zapisane, więc błąd README nie cofa go.
+    // Part 6: refresh the quest list in the container README (this quest's status → ✅).
+    // Best-effort — the pass is already saved, so a README error does not undo it.
     await regenerateContainerReadme(accessToken, login);
 
     return NextResponse.json({
@@ -201,11 +201,11 @@ export async function POST(req: Request) {
       longestStreak: summary.longestStreak,
     });
   } catch (e) {
-    // Pełny błąd tylko do logów serwera — klientowi ogólny komunikat (bez wycieku
-    // szczegółów OpenAI / GitHub / Prisma).
-    console.error("[quest/submit] Ocena nie powiodła się:", e);
+    // Full error only to the server logs — a generic message to the client (without leaking
+    // OpenAI / GitHub / Prisma details).
+    console.error("[quest/submit] Evaluation failed:", e);
     return NextResponse.json(
-      { error: "Ocena nie powiodła się. Spróbuj ponownie za chwilę." },
+      { error: "Evaluation failed. Please try again in a moment." },
       { status: 500 },
     );
   }

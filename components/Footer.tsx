@@ -1,6 +1,6 @@
 "use client";
 
-// Dyskretna, wyśrodkowana stopka w stylu GitHuba — widoczna na wszystkich ekranach.
+// Subtle, centered GitHub-style footer — visible on all screens.
 
 import { usePathname } from "next/navigation";
 
@@ -14,15 +14,15 @@ function GitHubMark() {
 
 export default function Footer() {
   const pathname = usePathname();
-  // Na profilu stopka zlewa się z główną częścią (#0C1015) — bez górnego odstępu,
-  // by nie było ciemnego paska. Na pozostałych stronach: #010409 z odstępem mt-12.
+  // On the profile, the footer blends into the main section (#0C1015) — no top margin,
+  // so there's no dark bar. On other pages: #010409 with an mt-12 margin.
   const isProfile = pathname.startsWith("/profile");
 
   return (
     <footer className={isProfile ? "bg-gh-panel" : "mt-12 bg-gh-bg-deep"}>
       <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-center gap-x-2 gap-y-1 px-6 py-6 text-xs text-gh-muted">
         <span>NERD - NewEveryRepoDay</span>
-        <span className="text-gh-subtle">Zrobione przez</span>
+        <span className="text-gh-subtle">Made by</span>
         <a
           href="https://github.com/DolilDev"
           target="_blank"

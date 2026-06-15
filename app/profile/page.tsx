@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { getViewerLogin } from "@/lib/profile-data";
 
-// „Twój profil" (/profile) to skrót: przekierowuje na /profile/[twój-login],
-// czyli tę samą trasę, której używamy do oglądania cudzych profili. Niezalogowany
-// → na stronę główną (tam jest logowanie przez GitHub).
+// "Your profile" (/profile) is a shortcut: it redirects to /profile/[your-login],
+// i.e. the same route we use to view other people's profiles. Not signed in
+// → to the home page (sign-in with GitHub is there).
 export default async function ProfileRedirect() {
   const login = await getViewerLogin();
   if (!login) redirect("/");

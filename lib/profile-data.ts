@@ -1,18 +1,18 @@
-// Serwerowe pobieranie danych profilu zalogowanego gracza (komponenty serwerowe).
-// UWAGA: tylko po stronie serwera — czyta sesję (auth) i bazę (Prisma).
-// Na tym etapie „oglądany profil" = profil zalogowanego usera (własny).
+// Server-side fetching of the logged-in player's profile data (server components).
+// NOTE: server-side only — reads the session (auth) and the database (Prisma).
+// At this stage, "viewed profile" = the logged-in user's profile (their own).
 import { cache } from "react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
-// Login GitHub zalogowanego gracza (lub null). cache() dedupuje wywołanie auth()
-// w obrębie jednego żądania — layout, sidebar i strona pytają o to samo raz.
+// GitHub login of the logged-in player (or null). cache() dedupes the auth() call
+// within a single request — the layout, sidebar, and page ask for the same thing once.
 export const getViewerLogin = cache(async (): Promise<string | null> => {
   const session = await auth();
   return session?.user?.login ?? null;
 });
 
-// Questy gracza (repozytoria questowe) — od najnowszego. Brak loginu → pusto.
+// The player's quests (quest repositories) — most recent first. No login → empty.
 export async function getUserQuests(login: string | null) {
   if (!login) return [];
   return prisma.quest.findMany({
@@ -21,20 +21,20 @@ export async function getUserQuests(login: string | null) {
   });
 }
 
-// Liczba questów gracza — licznik przy zakładce „Repositories".
+// The player's quest count — counter next to the "Repositories" tab.
 export async function getUserQuestCount(login: string | null): Promise<number> {
   if (!login) return 0;
   return prisma.quest.count({ where: { user: { githubLogin: login } } });
 }
 
-// Statystyki gracza (jeden wiersz) — currentStreak/longestStreak/totalQuests/points.
-// Brak wiersza → null (UI pokazuje zera).
+// The player's stats (a single row) — currentStreak/longestStreak/totalQuests/points.
+// No row → null (the UI shows zeros).
 export async function getUserStats(login: string | null) {
   if (!login) return null;
   return prisma.stats.findFirst({ where: { user: { githubLogin: login } } });
 }
 
-// Ukończenia gracza (źródło kalendarza) — rosnąco po dacie.
+// The player's completions (the calendar's source) — ascending by date.
 export async function getUserCompletions(login: string | null) {
   if (!login) return [];
   return prisma.completion.findMany({
@@ -44,8 +44,8 @@ export async function getUserCompletions(login: string | null) {
   });
 }
 
-// Data dołączenia gracza do TEJ strony (NERD) — users.createdAt z naszej bazy,
-// a NIE data założenia konta GitHub. Brak wiersza w users → null.
+// The date the player joined THIS site (NERD) — users.createdAt from our database,
+// NOT the GitHub account creation date. No row in users → null.
 export async function getUserJoinedAt(login: string | null): Promise<Date | null> {
   if (!login) return null;
   const u = await prisma.user.findUnique({
@@ -55,7 +55,7 @@ export async function getUserJoinedAt(login: string | null): Promise<Date | null
   return u?.createdAt ?? null;
 }
 
-// Zdobyte osiągnięcia gracza — od najwcześniej odblokowanego.
+// The player's earned achievements — earliest unlocked first.
 export async function getUserAchievements(login: string | null) {
   if (!login) return [];
   return prisma.achievement.findMany({

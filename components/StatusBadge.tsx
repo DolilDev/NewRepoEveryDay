@@ -1,5 +1,5 @@
-// Etykieta statusu questa po polsku (kolory jak w GitHubie: zielony = zaliczony).
-// `className` pozwala dorzucić utility'sy specyficzne dla miejsca użycia (np. shrink-0).
+// Quest status label (colors like on GitHub: green = passed).
+// `className` lets you add utilities specific to the usage site (e.g. shrink-0).
 export default function StatusBadge({
   status,
   className = "",
@@ -12,7 +12,7 @@ export default function StatusBadge({
       <span
         className={`rounded-full border border-gh-green/40 bg-gh-green/10 px-2 text-xs font-semibold text-gh-green ${className}`}
       >
-        Zaliczony
+        Passed
       </span>
     );
   }
@@ -20,7 +20,7 @@ export default function StatusBadge({
     <span
       className={`rounded-full border border-gh-border px-2 text-xs font-medium text-gh-muted ${className}`}
     >
-      W trakcie
+      Pending
     </span>
   );
 }

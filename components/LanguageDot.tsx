@@ -1,8 +1,8 @@
 import { languageColor } from "@/lib/language-colors";
 
-// Kolorowa kropka języka repozytorium (jak na GitHubie) wraz z nazwą języka.
-// Gdy języka nie udało się ustalić (null/brak) — nie renderujemy NIC, zgodnie z
-// wymaganiem: brak kropki przy nieznanym języku.
+// Colored repository language dot (like on GitHub) along with the language name.
+// When the language could not be determined (null/missing) — we render NOTHING, per
+// the requirement: no dot for an unknown language.
 export default function LanguageDot({
   language,
   className,

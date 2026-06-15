@@ -1,16 +1,16 @@
-// GET /api/cron/reset-streaks — zadanie cron (Vercel Cron) odpalane raz dziennie
-// po północy CET. Zeruje currentStreak graczom, którzy pominęli dzień.
+// GET /api/cron/reset-streaks — cron job (Vercel Cron) run once a day
+// after midnight CET. Resets currentStreak for players who missed a day.
 //
-// Logika: streak ŻYJE, jeśli ostatnie ukończenie było wczoraj (jest jeszcze dziś,
-// by je przedłużyć) albo dziś. Jeśli ostatnie ukończenie jest starsze niż wczoraj
-// (wg CET) — currentStreak spada do 0.
+// Logic: a streak is ALIVE if the last completion was yesterday (there is still
+// today to extend it) or today. If the last completion is older than yesterday
+// (in CET) — currentStreak drops to 0.
 //
-// WAŻNE: kasujemy WYŁĄCZNIE currentStreak. longestStreak, punkty, liczba questów
-// i osiągnięcia są trwałe i NIGDY nie są tu ruszane.
+// IMPORTANT: we clear ONLY currentStreak. longestStreak, points, the number of
+// quests and achievements are permanent and are NEVER touched here.
 //
-// Bezpieczeństwo: endpoint wymaga nagłówka Authorization: Bearer <CRON_SECRET>.
-// Vercel Cron dokłada ten nagłówek automatycznie, gdy ustawiony jest CRON_SECRET.
-// Bez poprawnego sekretu zwracamy 401 (fail-closed) — nie da się go wołać z zewnątrz.
+// Security: the endpoint requires an Authorization: Bearer <CRON_SECRET> header.
+// Vercel Cron adds this header automatically when CRON_SECRET is set.
+// Without a valid secret we return 401 (fail-closed) — it cannot be called from outside.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cetDayStart } from "@/lib/date";
@@ -21,14 +21,14 @@ export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
   const authHeader = req.headers.get("authorization");
   if (!secret || authHeader !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "Brak autoryzacji." }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  // „Dziś" wg CET (cron odpala się po północy CET) i „wczoraj".
+  // "Today" in CET (cron runs after midnight CET) and "yesterday".
   const today = cetDayStart();
   const yesterday = new Date(today.getTime() - 86_400_000);
 
-  // Kandydaci do sprawdzenia: każdy z niezerowym aktualnym streakiem.
+  // Candidates to check: anyone with a non-zero current streak.
   const active = await prisma.stats.findMany({
     where: { currentStreak: { gt: 0 } },
     select: { userId: true },
@@ -37,7 +37,7 @@ export async function GET(req: Request) {
 
   let reset = 0;
   if (ids.length > 0) {
-    // Którzy z nich mają ukończenie wczoraj lub dziś → streak zostaje aktualny.
+    // Which of them have a completion yesterday or today → streak stays current.
     const recent = await prisma.completion.findMany({
       where: { userId: { in: ids }, date: { gte: yesterday } },
       distinct: ["userId"],

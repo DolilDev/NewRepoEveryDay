@@ -1,6 +1,6 @@
-// Serwerowy odczyt tokenu GitHub z zaszyfrowanego JWT (ciasteczko sesji).
-// UWAGA: używać WYŁĄCZNIE w serwerowych API routes. Token nie jest nigdzie
-// wysyłany do przeglądarki — odszyfrowanie wymaga NEXTAUTH_SECRET (tylko serwer).
+// Server-side read of the GitHub token from the encrypted JWT (session cookie).
+// NOTE: use ONLY in server-side API routes. The token is never sent to the
+// browser — decryption requires NEXTAUTH_SECRET (server only).
 import { getToken } from "next-auth/jwt";
 import { cookies } from "next/headers";
 import { cache } from "react";
@@ -8,18 +8,19 @@ import { cache } from "react";
 export type ServerAuth = {
   accessToken: string;
   login: string | null;
-  // Publiczne dane profilu z zaszyfrowanego JWT — do upsertu wiersza w users.
+  // Public profile data from the encrypted JWT — for upserting the users row.
   name: string | null;
   avatarUrl: string | null;
   bio: string | null;
 };
 
 export async function getServerAuth(req: Request): Promise<ServerAuth | null> {
-  // W produkcji (https) NextAuth używa nazwy ciasteczka z prefiksem __Secure-,
-  // a salt do odszyfrowania JWT zależy od tej nazwy. NEXTAUTH_URL bywa nieustawiony
-  // na Vercel (host wykrywa trustHost), więc gdy go brak — produkcję rozpoznajemy po
-  // NODE_ENV (na Vercel prod/preview = "production"). Inaczej getToken szukałby
-  // ciasteczka bez prefiksu i sesja serwerowa byłaby pusta mimo zalogowania.
+  // In production (https) NextAuth uses a cookie name with the __Secure- prefix,
+  // and the salt for decrypting the JWT depends on that name. NEXTAUTH_URL is often
+  // unset on Vercel (host is detected via trustHost), so when it is missing we detect
+  // production via NODE_ENV (on Vercel prod/preview = "production"). Otherwise getToken
+  // would look for a cookie without the prefix and the server-side session would be
+  // empty despite being logged in.
   const secureCookie =
     process.env.NEXTAUTH_URL?.startsWith("https://") ??
     process.env.NODE_ENV === "production";
@@ -34,10 +35,9 @@ export async function getServerAuth(req: Request): Promise<ServerAuth | null> {
   if (typeof accessToken !== "string" || !accessToken) return null;
 
   const login = typeof token?.login === "string" ? token.login : null;
-  // name/picture to standardowe pola JWT (NextAuth zapisuje je z profilu GitHub),
-  // bio dociągnięte do token.github przy logowaniu. profileUrl wyliczamy z loginu.
-  const name =
-    typeof token?.name === "string" && token.name.trim() ? token.name : null;
+  // name/picture are standard JWT fields (NextAuth saves them from the GitHub profile),
+  // bio is fetched into token.github at login time. profileUrl is derived from the login.
+  const name = typeof token?.name === "string" && token.name.trim() ? token.name : null;
   const avatarUrl =
     typeof token?.picture === "string" && token.picture ? token.picture : null;
   const bio =
@@ -47,10 +47,10 @@ export async function getServerAuth(req: Request): Promise<ServerAuth | null> {
   return { accessToken, login, name, avatarUrl, bio };
 }
 
-// Token OAuth zalogowanego gracza odczytany z ciasteczek (do użycia w server
-// components, gdzie nie mamy obiektu Request). Zwraca null, gdy nikt nie jest
-// zalogowany. Token NIE trafia do przeglądarki — służy tylko do serwerowych
-// zapytań do GitHub API (np. dociągnięcie języków cudzego, publicznego repo).
+// OAuth token of the logged-in player read from cookies (for use in server
+// components, where we don't have a Request object). Returns null when no one is
+// logged in. The token does NOT reach the browser — it is used only for server-side
+// requests to the GitHub API (e.g. fetching the languages of someone else's public repo).
 export const getCookieAccessToken = cache(async (): Promise<string | null> => {
   const secureCookie =
     process.env.NEXTAUTH_URL?.startsWith("https://") ??

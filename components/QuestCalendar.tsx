@@ -1,20 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  QUEST_DONE_COLOR,
-  QUEST_EMPTY_COLOR,
-  type QuestDay,
-} from "@/lib/calendar";
-import { formatPlDate, shortMonth } from "@/lib/date";
+import { QUEST_DONE_COLOR, QUEST_EMPTY_COLOR, type QuestDay } from "@/lib/calendar";
+import { formatDate, shortMonth } from "@/lib/date";
 
 const CELL = 11; // px
 const GAP = 3; // px
 const STEP = CELL + GAP;
 const DAY_LABEL_WIDTH = 28; // px
 
-// Etykiety dni tygodnia (wiersze Pon–Nd); GitHub pokazuje co drugą.
-const DAY_LABELS = ["Pon", "", "Śr", "", "Pt", "", "Nd"];
+// Day-of-week labels (rows Mon–Sun); GitHub shows every other one.
+const DAY_LABELS = ["Mon", "", "Wed", "", "Fri", "", "Sun"];
 
 interface HoverState {
   day: QuestDay;
@@ -31,7 +27,7 @@ export default function QuestCalendar({
 }) {
   const [hover, setHover] = useState<HoverState | null>(null);
 
-  // Dane startują od poniedziałku → dzielimy sekwencyjnie na tygodnie (kolumny).
+  // Data starts on Monday → we split it sequentially into weeks (columns).
   const weeks = useMemo(() => {
     const chunks: QuestDay[][] = [];
     for (let i = 0; i < days.length; i += 7) {
@@ -40,7 +36,7 @@ export default function QuestCalendar({
     return chunks;
   }, [days]);
 
-  // Etykiety miesięcy nad kolumnami — przy zmianie miesiąca, bez tłoku.
+  // Month labels above the columns — at each month change, without crowding.
   const monthLabels = useMemo(() => {
     const labels: { col: number; label: string }[] = [];
     let lastMonth = -1;
@@ -62,12 +58,12 @@ export default function QuestCalendar({
   return (
     <div>
       <div className="mb-4 text-sm text-gh-muted">
-        {completedCount} ukończonych questów w ostatnim roku
+        {completedCount} quests completed in the last year
       </div>
 
       <div className="overflow-x-auto pb-1">
         <div style={{ minWidth: DAY_LABEL_WIDTH + weeks.length * STEP }}>
-          {/* Etykiety miesięcy */}
+          {/* Month labels */}
           <div className="relative h-4" style={{ marginLeft: DAY_LABEL_WIDTH }}>
             {monthLabels.map((m) => (
               <span
@@ -80,12 +76,9 @@ export default function QuestCalendar({
             ))}
           </div>
 
-          {/* Etykiety dni + siatka */}
+          {/* Day labels + grid */}
           <div className="flex">
-            <div
-              className="flex flex-col"
-              style={{ width: DAY_LABEL_WIDTH, gap: GAP }}
-            >
+            <div className="flex flex-col" style={{ width: DAY_LABEL_WIDTH, gap: GAP }}>
               {DAY_LABELS.map((label, i) => (
                 <span
                   key={i}
@@ -106,19 +99,13 @@ export default function QuestCalendar({
                       style={{
                         width: CELL,
                         height: CELL,
-                        backgroundColor: day.done
-                          ? QUEST_DONE_COLOR
-                          : QUEST_EMPTY_COLOR,
+                        backgroundColor: day.done ? QUEST_DONE_COLOR : QUEST_EMPTY_COLOR,
                         borderRadius: 2,
                       }}
                       className="ring-1 ring-inset ring-white/[0.04]"
-                      onMouseEnter={(e) =>
-                        setHover({ day, x: e.clientX, y: e.clientY })
-                      }
+                      onMouseEnter={(e) => setHover({ day, x: e.clientX, y: e.clientY })}
                       onMouseMove={(e) =>
-                        setHover((h) =>
-                          h ? { ...h, x: e.clientX, y: e.clientY } : h,
-                        )
+                        setHover((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))
                       }
                       onMouseLeave={() => setHover(null)}
                     />
@@ -130,7 +117,7 @@ export default function QuestCalendar({
         </div>
       </div>
 
-      {/* Legenda (binarna: ukończony / brak) */}
+      {/* Legend (binary: completed / none) */}
       <div className="mt-4 flex items-center justify-end gap-2 text-xs text-gh-muted">
         <span
           style={{
@@ -141,7 +128,7 @@ export default function QuestCalendar({
           }}
           className="ring-1 ring-inset ring-white/[0.04]"
         />
-        <span>Brak questa</span>
+        <span>No quest</span>
         <span
           style={{
             width: CELL,
@@ -151,22 +138,18 @@ export default function QuestCalendar({
           }}
           className="ml-2 ring-1 ring-inset ring-white/[0.04]"
         />
-        <span>Quest ukończony</span>
+        <span>Quest completed</span>
       </div>
 
-      {/* Tooltip podążający za kursorem */}
+      {/* Tooltip that follows the cursor */}
       {hover && (
         <div
           className="pointer-events-none fixed z-50 max-w-[260px] rounded-md border border-gh-border bg-gh-surface2 px-2.5 py-1.5 text-xs shadow-lg"
           style={{ left: hover.x + 14, top: hover.y + 14 }}
         >
-          <div className="font-semibold text-gh-text">
-            {formatPlDate(hover.day.date)}
-          </div>
+          <div className="font-semibold text-gh-text">{formatDate(hover.day.date)}</div>
           <div className="text-gh-muted">
-            {hover.day.done
-              ? hover.day.description
-              : "Brak ukończonego questa tego dnia"}
+            {hover.day.done ? hover.day.description : "No quest completed on this day"}
           </div>
         </div>
       )}

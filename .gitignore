@@ -19,11 +19,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# env files — nigdy nie commituj sekretów
+# env files — never commit secrets
 .env
 .env*
 .env.local
-# ...ale szablon bez sekretów trzymamy w repo
+# ...but we keep the template without secrets in the repo
 !.env.example
 
 # typescript
@@ -33,6 +33,6 @@ next-env.d.ts
 # vercel
 .vercel
 
-# Claude Code — lokalne ustawienia (nie commituj)
+# Claude Code — local settings (do not commit)
 .claude/settings.local.json
 .claude

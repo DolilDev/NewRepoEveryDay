@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-// Czas do najbliższej północy w strefie Europe/Warsaw — globalny reset questa.
-// Czytamy realny zegar ścienny w Warszawie przez Intl, więc DST (CET↔CEST) jest
-// obsłużony automatycznie (bez sztywnego offsetu UTC+1).
+// Time until the next midnight in the Europe/Warsaw timezone — global quest reset.
+// We read the real wall clock in Warsaw via Intl, so DST (CET↔CEST) is
+// handled automatically (no hardcoded UTC+1 offset).
 function msUntilMidnightCET(): number {
   const now = new Date();
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -14,13 +14,11 @@ function msUntilMidnightCET(): number {
     second: "2-digit",
     hour12: false,
   }).formatToParts(now);
-  const get = (type: string) =>
-    Number(parts.find((p) => p.type === type)?.value);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
   let h = get("hour");
-  if (h === 24) h = 0; // część środowisk zwraca "24" o północy
+  if (h === 24) h = 0; // some environments return "24" at midnight
   const elapsedMs =
-    (h * 3600 + get("minute") * 60 + get("second")) * 1000 +
-    now.getMilliseconds();
+    (h * 3600 + get("minute") * 60 + get("second")) * 1000 + now.getMilliseconds();
   return 24 * 3600 * 1000 - elapsedMs;
 }
 
@@ -34,8 +32,8 @@ function format(ms: number): string {
 }
 
 export default function Countdown() {
-  // Start jako null → ten sam render na serwerze i kliencie (brak błędu hydracji).
-  // Realna wartość pojawia się dopiero po zamontowaniu komponentu.
+  // Start as null → the same render on the server and client (no hydration error).
+  // The real value only appears after the component is mounted.
   const [label, setLabel] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,8 +44,6 @@ export default function Countdown() {
   }, []);
 
   return (
-    <span className="font-mono tabular-nums text-gh-text">
-      {label ?? "--:--:--"}
-    </span>
+    <span className="font-mono tabular-nums text-gh-text">{label ?? "--:--:--"}</span>
   );
 }

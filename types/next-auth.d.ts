@@ -1,8 +1,8 @@
 import type { DefaultSession } from "next-auth";
 import type { GitHubProfile } from "@/lib/github";
 
-// Rozszerzamy sesję o login GitHuba (username) oraz publiczne dane profilu
-// (bio/followers/...) dociągnięte z GitHub API. Token dostępu NIE jest tu trzymany.
+// We extend the session with the GitHub login (username) and public profile data
+// (bio/followers/...) fetched from the GitHub API. The access token is NOT kept here.
 declare module "next-auth" {
   interface Session {
     user: {
@@ -12,14 +12,14 @@ declare module "next-auth" {
   }
 }
 
-// JWT jest deklarowany w @auth/core/jwt (next-auth/jwt tylko go reeksportuje),
-// więc augmentację kierujemy tam, inaczej deklaracje się nie zmergują.
+// JWT is declared in @auth/core/jwt (next-auth/jwt only re-exports it),
+// so we direct the augmentation there, otherwise the declarations won't merge.
 declare module "@auth/core/jwt" {
   interface JWT {
     login?: string;
     github?: GitHubProfile;
-    // Token OAuth GitHuba — trzymany TYLKO w zaszyfrowanym JWT po stronie serwera,
-    // odczytywany w serwerowych API routes. Nigdy nie trafia do sesji/przeglądarki.
+    // The GitHub OAuth token — kept ONLY in the encrypted JWT on the server side,
+    // read in server-side API routes. It never goes into the session/browser.
     accessToken?: string;
   }
 }

@@ -1,10 +1,10 @@
-// Pomocnicze daty wg czasu Europe/Warsaw (CET/CEST) — wspólne źródło prawdy o
-// tym, który dzień jest "dzisiaj" dla questów (reset o północy CET, jak w UI).
+// Date helpers based on Europe/Warsaw time (CET/CEST) — a shared source of truth
+// about which day is "today" for quests (reset at CET midnight, as in the UI).
 
 const TZ = "Europe/Warsaw";
 
-// Składowe kalendarzowe (rok, miesiąc, dzień) wg strefy Europe/Warsaw dla danej
-// chwili. Intl ogarnia przejścia DST, więc nie liczymy offsetu ręcznie.
+// Calendar components (year, month, day) in the Europe/Warsaw zone for a given
+// instant. Intl handles DST transitions, so we don't compute the offset manually.
 function warsawYmd(now: Date): [number, number, number] {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: TZ,
@@ -12,70 +12,82 @@ function warsawYmd(now: Date): [number, number, number] {
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(now);
-  const get = (type: string) =>
-    Number(parts.find((p) => p.type === type)?.value);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
   return [get("year"), get("month"), get("day")];
 }
 
-// Kanoniczny znacznik "dnia CET": północ UTC kalendarzowego dnia wg Europe/Warsaw.
-// Ten sam dzień zawsze daje identyczny Date, więc nadaje się jako klucz limitu
-// 1/dzień i do porównań równościowych.
+// Canonical "CET day" marker: UTC midnight of the calendar day in Europe/Warsaw.
+// The same day always yields an identical Date, so it works as a key for the
+// 1/day limit and for equality comparisons.
 export function cetDayStart(now: Date = new Date()): Date {
   const [y, m, d] = warsawYmd(now);
   return new Date(Date.UTC(y, m - 1, d));
 }
 
-// Dzień CET w formacie YYYY-MM-DD.
+// CET day in YYYY-MM-DD format.
 export function cetTodayIso(now: Date = new Date()): string {
   return cetDayStart(now).toISOString().slice(0, 10);
 }
 
-const PL_MONTHS_GENITIVE = [
-  "stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca",
-  "lipca", "sierpnia", "września", "października", "listopada", "grudnia",
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
-const PL_MONTHS_SHORT = [
-  "sty", "lut", "mar", "kwi", "maj", "cze",
-  "lip", "sie", "wrz", "paź", "lis", "gru",
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
-const PL_MONTHS_NOMINATIVE = [
-  "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec",
-  "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień",
-];
-
-// Data z ISO (YYYY-MM-DD) po polsku, np. "4 czerwca 2026" (dopełniacz miesiąca).
-export function formatPlDate(iso: string): string {
+// Date from ISO (YYYY-MM-DD) in English, e.g. "June 4, 2026".
+export function formatDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
-  return `${d} ${PL_MONTHS_GENITIVE[m - 1]} ${y}`;
+  return `${MONTHS[m - 1]} ${d}, ${y}`;
 }
 
-// Skrót miesiąca (0–11), np. 5 → "cze" — etykiety nad kolumnami kalendarza.
+// Short month name (0–11), e.g. 5 → "Jun" — labels above the calendar columns.
 export function shortMonth(monthIndex: number): string {
-  return PL_MONTHS_SHORT[monthIndex];
+  return MONTHS_SHORT[monthIndex];
 }
 
-// Miesiąc + rok po polsku, np. "marzec 2021" (data dołączenia z GitHuba).
-// Przyjmuje pełny ISO 8601; liczone w UTC, by nie przesunąć dnia na granicy miesiąca.
-export function formatPlMonthYear(iso: string): string {
+// Month + year in English, e.g. "March 2021" (join date from GitHub).
+// Accepts a full ISO 8601 string; computed in UTC to avoid shifting the day at a month boundary.
+export function formatMonthYear(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return `${PL_MONTHS_NOMINATIVE[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
-// Względny opis daty questa po polsku ("Dzisiaj", "Wczoraj", "3 dni temu",
-// "tydzień temu", "2 tygodnie temu"), a dla starszych — pełna data.
-// `day` to kanoniczny dzień CET (północ UTC), porównywany z dzisiejszym dniem CET.
+// Relative description of a quest date in English ("Today", "Yesterday", "3 days ago",
+// "a week ago", "2 weeks ago"), and for older ones — the full date.
+// `day` is the canonical CET day (UTC midnight), compared against today's CET day.
 export function relativeQuestDate(day: Date, now: Date = new Date()): string {
-  const diffDays = Math.round(
-    (cetDayStart(now).getTime() - day.getTime()) / 86_400_000,
-  );
-  if (diffDays <= 0) return "Dzisiaj";
-  if (diffDays === 1) return "Wczoraj";
-  if (diffDays < 7) return `${diffDays} dni temu`;
-  if (diffDays < 14) return "tydzień temu";
+  const diffDays = Math.round((cetDayStart(now).getTime() - day.getTime()) / 86_400_000);
+  if (diffDays <= 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 14) return "a week ago";
   const weeks = Math.floor(diffDays / 7);
-  if (weeks < 5) return `${weeks} tygodnie temu`;
-  return `${day.getUTCDate()} ${PL_MONTHS_GENITIVE[day.getUTCMonth()]} ${day.getUTCFullYear()}`;
+  if (weeks < 5) return `${weeks} weeks ago`;
+  return `${MONTHS[day.getUTCMonth()]} ${day.getUTCDate()}, ${day.getUTCFullYear()}`;
 }

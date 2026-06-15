@@ -2,7 +2,7 @@
 
 import { SessionProvider } from "next-auth/react";
 
-// Udostępnia sesję NextAuth komponentom klienckim (np. navbarowi przez useSession).
+// Exposes the NextAuth session to client components (e.g. the navbar via useSession).
 export default function Providers({ children }: { children: React.ReactNode }) {
   return <SessionProvider>{children}</SessionProvider>;
 }
