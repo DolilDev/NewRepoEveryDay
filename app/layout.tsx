@@ -3,9 +3,10 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Providers from "@/components/Providers";
+import TitleCountdown from "@/components/TitleCountdown";
 
 export const metadata: Metadata = {
-  title: "NERD - NewEveryRepoDay",
+  title: "NERD",
   description:
     "NERD - NewEveryRepoDay: daily quests for developers that push you beyond familiar technologies.",
 };
@@ -14,6 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="flex min-h-screen flex-col bg-gh-bg-deep font-sans text-gh-text antialiased">
+        <TitleCountdown />
         <Providers>
           <Header />
           <main className="flex flex-1 flex-col">{children}</main>
