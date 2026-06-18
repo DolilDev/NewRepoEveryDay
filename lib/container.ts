@@ -2,7 +2,8 @@
 // in which every quest is a separate SUBFOLDER. This module holds the fixed
 // container name, ensures it exists, and builds the folder/file URLs.
 // NOTE: server-side only — it uses the GitHub token.
-import { getRepo, createRepo, putFile, getFileSha } from "@/lib/github";
+import { getRepo, createRepo, putFile, getFileSha, fetchRepoTree } from "@/lib/github";
+import { folderStacksFromTree } from "@/lib/languages";
 import { prisma } from "@/lib/prisma";
 
 // Fixed container-repo name — one per user. Kept in sync with scripts/db-reset.mjs.
@@ -115,6 +116,7 @@ export function questMdUrlFor(
 type ReadmeQuest = {
   title: string;
   why: string;
+  instructions: string;
   folderName: string | null;
   status: string; // QuestStatus: PENDING / PASSED / FAILED
 };
@@ -127,20 +129,47 @@ function cell(text: string): string {
     .trim();
 }
 
-// Short quest description for the "Description" column: first sentence of `why`
-// (fallback: the title), trimmed to a reasonable length.
-function shortDescription(q: ReadmeQuest): string {
-  const src = (q.why || q.title || "").replace(/\s+/g, " ").trim();
-  const m = src.match(/^(.+?[.!?])(\s|$)/);
-  let s = (m ? m[1] : src).trim() || q.title.trim();
-  if (s.length > 140) s = `${s.slice(0, 139).trimEnd()}…`;
-  return s;
+// Description for the "Description" column: an actual summary of WHAT the project is,
+// taken from `instructions` (the project brief), not from `why` (the rationale).
+// We keep whole sentences — enough to describe the project — and never chop a word
+// in half. The first sentence usually states what to build; a second is added only
+// if the first is short. A generous cap on a word boundary stops a cell running away.
+function projectDescription(q: ReadmeQuest): string {
+  const src = (q.instructions || q.why || q.title || "").replace(/\s+/g, " ").trim();
+  if (!src) return q.title.trim();
+
+  const sentences = src.match(/[^.!?]+[.!?]+/g) ?? [src];
+  const SOFT_MIN = 90; // grow until the description is substantive…
+  const HARD_MAX = 300; // …but never let a cell get unwieldy.
+  let text = "";
+  for (const raw of sentences) {
+    const s = raw.trim();
+    const next = text ? `${text} ${s}` : s;
+    if (text && next.length > HARD_MAX) break; // adding this sentence overflows → stop
+    text = next;
+    if (text.length >= SOFT_MIN) break; // enough to describe the project
+  }
+  if (!text) text = sentences[0].trim();
+
+  // Only when a single sentence already exceeds the cap: cut on a word boundary.
+  if (text.length > HARD_MAX) {
+    const cut = text.slice(0, HARD_MAX);
+    const lastSpace = cut.lastIndexOf(" ");
+    text = `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+  }
+  return text || q.title.trim();
 }
 
 // Builds the ENTIRE container README from the current quest state (a plain string,
 // assembled by the app — NOT by OpenAI). Quests are passed newest-first.
+// `stacks` maps a folderName → the languages actually used in that folder (ranked,
+// dominant first), detected from the repo files; folders with no code yet are absent.
 // The README is regenerated in full, so there are never any duplicates.
-export function buildContainerReadme(quests: ReadmeQuest[], login: string): string {
+export function buildContainerReadme(
+  quests: ReadmeQuest[],
+  login: string,
+  stacks: Record<string, string[]> = {},
+): string {
   const header = [
     "# NERD - New Every Day Repo",
     "",
@@ -164,13 +193,17 @@ export function buildContainerReadme(quests: ReadmeQuest[], login: string): stri
     const folder = q.folderName
       ? `[${cell(q.folderName)}](./${encodeURI(q.folderName)})`
       : "—";
-    return `| ${status} | ${cell(q.title)} | ${cell(shortDescription(q))} | ${folder} |`;
+    const stack =
+      q.folderName && stacks[q.folderName]?.length
+        ? cell(stacks[q.folderName].join(", "))
+        : "—";
+    return `| ${status} | ${cell(q.title)} | ${cell(projectDescription(q))} | ${stack} | ${folder} |`;
   });
 
   return [
     ...header,
-    "| Status | Quest | Description | Folder |",
-    "| :----: | ----- | ----------- | ------ |",
+    "| Status | Quest | Description | Stack | Folder |",
+    "| :----: | ----- | ----------- | ----- | ------ |",
     ...rows,
     "",
     "---",
@@ -195,10 +228,26 @@ export async function regenerateContainerReadme(
     const quests = await prisma.quest.findMany({
       where: { user: { githubLogin: login } },
       orderBy: { date: "desc" },
-      select: { title: true, why: true, folderName: true, status: true },
+      select: {
+        title: true,
+        why: true,
+        instructions: true,
+        folderName: true,
+        status: true,
+      },
     });
 
-    const markdown = buildContainerReadme(quests, login);
+    // Detect the stack actually used per folder from the container repo tree
+    // (best-effort: on any failure we just render the README without stacks).
+    const tree = await fetchRepoTree(
+      accessToken,
+      owner,
+      CONTAINER_REPO,
+      repo.defaultBranch,
+    );
+    const stacks = tree ? folderStacksFromTree(tree) : {};
+
+    const markdown = buildContainerReadme(quests, login, stacks);
     // Overwriting the existing README requires its sha (missing → creates a new one).
     const sha = await getFileSha(
       accessToken,
