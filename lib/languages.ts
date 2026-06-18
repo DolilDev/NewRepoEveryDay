@@ -95,3 +95,66 @@ export function folderStacksFromTree(
   }
   return result;
 }
+
+// npm package → display name for the Stack column. Order matters: more specific
+// meta-frameworks come first, so a Next.js app reads "Next.js, React" not just "React".
+// Detected from a folder's package.json (frameworks can't be told apart from file
+// extensions alone — .tsx could be React, Preact, Solid, …).
+const NPM_FRAMEWORKS: ReadonlyArray<readonly [dep: string, name: string]> = [
+  ["next", "Next.js"],
+  ["nuxt", "Nuxt"],
+  ["@remix-run/react", "Remix"],
+  ["gatsby", "Gatsby"],
+  ["@sveltejs/kit", "SvelteKit"],
+  ["svelte", "Svelte"],
+  ["@angular/core", "Angular"],
+  ["react-native", "React Native"],
+  ["expo", "Expo"],
+  ["@nestjs/core", "NestJS"],
+  ["react", "React"],
+  ["vue", "Vue"],
+  ["solid-js", "SolidJS"],
+  ["preact", "Preact"],
+  ["astro", "Astro"],
+  ["express", "Express"],
+  ["fastify", "Fastify"],
+  ["koa", "Koa"],
+  ["electron", "Electron"],
+  ["vite", "Vite"],
+];
+
+// Frameworks/runtime detected from a folder's package.json content. The mere
+// presence of a package.json means it's a Node.js project, so "Node.js" is always
+// included (last). On malformed JSON we still report Node.js. Frameworks come first,
+// in NPM_FRAMEWORKS order; Node.js is appended.
+export function frameworksFromPackageJson(text: string): string[] {
+  let deps: Record<string, unknown> = {};
+  try {
+    const pkg = JSON.parse(text) as {
+      dependencies?: Record<string, unknown>;
+      devDependencies?: Record<string, unknown>;
+    };
+    deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
+  } catch {
+    return ["Node.js"]; // unparsable, but it IS a package.json → a Node project
+  }
+
+  const found: string[] = [];
+  for (const [dep, name] of NPM_FRAMEWORKS) {
+    if (dep in deps && !found.includes(name)) found.push(name);
+  }
+  found.push("Node.js");
+  return found;
+}
+
+// Final Stack list for a folder: frameworks first (from package.json), then the
+// languages detected from file extensions — deduplicated and capped so a single
+// cell stays readable (e.g. "Next.js, React, Node.js, TypeScript, CSS").
+export function mergeStack(frameworks: string[], languages: string[], max = 5): string[] {
+  const out: string[] = [];
+  for (const item of [...frameworks, ...languages]) {
+    if (item && !out.includes(item)) out.push(item);
+    if (out.length >= max) break;
+  }
+  return out;
+}

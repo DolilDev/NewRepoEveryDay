@@ -2,8 +2,19 @@
 // in which every quest is a separate SUBFOLDER. This module holds the fixed
 // container name, ensures it exists, and builds the folder/file URLs.
 // NOTE: server-side only — it uses the GitHub token.
-import { getRepo, createRepo, putFile, getFileSha, fetchRepoTree } from "@/lib/github";
-import { folderStacksFromTree } from "@/lib/languages";
+import {
+  getRepo,
+  createRepo,
+  putFile,
+  getFileSha,
+  fetchRepoTree,
+  fetchBlobText,
+} from "@/lib/github";
+import {
+  folderStacksFromTree,
+  frameworksFromPackageJson,
+  mergeStack,
+} from "@/lib/languages";
 import { prisma } from "@/lib/prisma";
 
 // Fixed container-repo name — one per user. Kept in sync with scripts/db-reset.mjs.
@@ -212,6 +223,47 @@ export function buildContainerReadme(
   ].join("\n");
 }
 
+// Builds the per-folder Stack lists for the README from the container repo tree:
+// the languages used (from file extensions) merged with the frameworks/runtime read
+// from each folder's package.json (Next.js, React, Node.js, …). package.json files
+// are fetched in parallel — one per folder (the shallowest, for nested layouts).
+async function detectFolderStacks(
+  accessToken: string,
+  owner: string,
+  tree: ReadonlyArray<{ path: string; sha: string }>,
+): Promise<Record<string, string[]>> {
+  const langStacks = folderStacksFromTree(tree);
+
+  // The shallowest package.json inside each quest folder → one blob fetch per folder.
+  const pkg = new Map<string, { sha: string; depth: number }>();
+  for (const e of tree) {
+    const slash = e.path.indexOf("/");
+    if (slash <= 0 || !e.path.endsWith("/package.json")) continue;
+    const folder = e.path.slice(0, slash);
+    const depth = e.path.split("/").length;
+    const cur = pkg.get(folder);
+    if (!cur || depth < cur.depth) pkg.set(folder, { sha: e.sha, depth });
+  }
+
+  const frameworks: Record<string, string[]> = {};
+  await Promise.all(
+    [...pkg].map(async ([folder, { sha }]) => {
+      const text = await fetchBlobText(accessToken, owner, CONTAINER_REPO, sha);
+      if (text) frameworks[folder] = frameworksFromPackageJson(text);
+    }),
+  );
+
+  // Frameworks first, then languages, for every folder that has either.
+  const stacks: Record<string, string[]> = {};
+  for (const folder of new Set([
+    ...Object.keys(langStacks),
+    ...Object.keys(frameworks),
+  ])) {
+    stacks[folder] = mergeStack(frameworks[folder] ?? [], langStacks[folder] ?? []);
+  }
+  return stacks;
+}
+
 // Regenerates and OVERWRITES the given user's container README with the current
 // quest index from the database. Best-effort: an error (no container, GitHub
 // problem) returns false and must NOT break the quest generation/evaluation that
@@ -237,15 +289,16 @@ export async function regenerateContainerReadme(
       },
     });
 
-    // Detect the stack actually used per folder from the container repo tree
-    // (best-effort: on any failure we just render the README without stacks).
+    // Detect the stack actually used per folder from the container repo tree:
+    // languages (file extensions) + frameworks/runtime from package.json.
+    // Best-effort: on any failure we just render the README without stacks.
     const tree = await fetchRepoTree(
       accessToken,
       owner,
       CONTAINER_REPO,
       repo.defaultBranch,
     );
-    const stacks = tree ? folderStacksFromTree(tree) : {};
+    const stacks = tree ? await detectFolderStacks(accessToken, owner, tree) : {};
 
     const markdown = buildContainerReadme(quests, login, stacks);
     // Overwriting the existing README requires its sha (missing → creates a new one).
